@@ -16,4 +16,14 @@ class Ingreso extends Model
         'fecha',
         'total',
     ];
+
+    public function detalles()
+    {
+        return $this->hasMany(DetalleIngresos::class);
+    }
+
+    public function proveedor()
+    {
+        return $this->belongsTo(Proveedor::class);
+    }
 }

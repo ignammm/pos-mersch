@@ -16,4 +16,14 @@ class DetalleIngresos extends Model
         'precio_unitario',
         'subtotal',
     ];
+
+    public function ingreso()
+    {
+        return $this->belongsTo(Ingreso::class);
+    }
+
+    public function articulo()
+    {
+        return $this->belongsTo(Articulo::class);
+    }
 }

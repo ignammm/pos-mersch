@@ -25,7 +25,7 @@ class ReferenciaRsf extends Model
         'rubro',
         'segmento',
         'enlace',
-        'oem',
+        'enlace',
         'codigo_barra',
         'codigo_rsf',
     ];
