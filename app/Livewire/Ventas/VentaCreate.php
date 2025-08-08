@@ -6,6 +6,7 @@ use App\Models\Articulo;
 use App\Models\Cliente;
 use App\Models\DetalleVenta;
 use App\Models\Factura;
+use App\Models\Stock;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -113,34 +114,43 @@ class VentaCreate extends Component
         DB::beginTransaction();
 
         
-            $venta = Factura::create([
-                'cliente_id' => $this->cliente_id,
-                'user_id' => $user->id,
-                'tipo_comprobante' => $this->tipo_comprobante,
-                'numero' => Factura::numeroComprobante($this->tipo_comprobante),
-                'monto_original' => $this->total,
-                'descuento_aplicado' => $this->descuento_factura,
-                'monto_final' => $this->calcularTotal(),
-                'forma_pago' => $this->forma_pago,
-                'fecha' => now(),
-                'total' => $this->total,
+        $venta = Factura::create([
+            'cliente_id' => $this->cliente_id,
+            'user_id' => $user->id,
+            'tipo_comprobante' => $this->tipo_comprobante,
+            'numero' => Factura::numeroComprobante($this->tipo_comprobante),
+            'monto_original' => $this->total,
+            'descuento_aplicado' => $this->descuento_factura,
+            'monto_final' => $this->calcularTotal(),
+            'forma_pago' => $this->forma_pago,
+            'fecha' => now(),
+            'total' => $this->total,
+        ]);
+
+        foreach ($this->items as $item) {
+            DetalleVenta::create([
+                'factura_id' => $venta->id,
+                'articulo_id' => $item['articulo_id'],
+                'cantidad' => $item['cantidad'],
+                'precio_unitario' => $item['precio_unitario'],
+                'descuento_aplicado' => $item['descuento_unitario'] ?? 0,
+                'subtotal' => $item['subtotal'],
             ]);
 
-            foreach ($this->items as $item) {
-                DetalleVenta::create([
-                    'factura_id' => $venta->id,
-                    'articulo_id' => $item['articulo_id'],
-                    'cantidad' => $item['cantidad'],
-                    'precio_unitario' => $item['precio_unitario'],
-                    'descuento_aplicado' => $item['descuento_unitario'] ?? 0,
-                    'subtotal' => $item['subtotal'],
-                ]);
+            // Descontar stock de tabla stock
+            $stock = Stock::where('articulo_id', $item['articulo_id'])->first();
+
+            if ($stock) {
+                $stock->cantidad = max(0, $stock->cantidad - $item['cantidad']);
+                $stock->save();
             }
+        }
+        
 
-            DB::commit();
+        DB::commit();
 
-            $this->dispatch('venta-create'); 
-            $this->reset(['cliente_id', 'forma_pago', 'items', 'codigo_barra', 'cantidad', 'descuento', 'total']);
+        $this->dispatch('venta-create'); 
+        $this->reset(['cliente_id', 'forma_pago', 'items', 'codigo_barra', 'cantidad', 'descuento', 'total']);
     }
 
 
