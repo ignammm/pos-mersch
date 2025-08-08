@@ -118,8 +118,6 @@
                     Eliminar
                 </x-button>
             </div>
-
-
         </div>
     </form>
 </div>

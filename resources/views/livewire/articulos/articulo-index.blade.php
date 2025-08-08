@@ -39,7 +39,7 @@
                         <td class="px-4 py-2 text-center">
                             <a href="{{ route('articulos.edit', $articulo) }}"
                                class="text-blue-600 hover:underline text-sm">
-                               Editar
+                               Ver
                             </a>
                         </td>
                     </tr>

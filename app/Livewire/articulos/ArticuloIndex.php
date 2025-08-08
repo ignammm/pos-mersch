@@ -29,7 +29,7 @@ class ArticuloIndex extends Component
                 ->orWhere('marca', 'like', '%' . $this->search . '%');
         })
         ->orderBy('id', 'desc')
-        ->paginate(7);
+        ->paginate(9);
 
 
         return view('livewire.articulos.articulo-index', compact('articulos'));

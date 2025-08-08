@@ -1,9 +1,9 @@
 <div class="p-4">
-    <h1 class="text-4xl font-bold mb-10">Ingreso de stock</h1>
+    <h1 class="text-4xl font-bold mb-10">Venta</h1>
 
     <div 
         x-data="{ mostrar: false }" 
-        x-init="@this.on('ingreso-create', () => { 
+        x-init="@this.on('venta-create', () => { 
             mostrar = true; 
             setTimeout(() => mostrar = false, 2000); 
         })"
@@ -14,7 +14,7 @@
             x-transition
             class="bg-green-600 text-white px-4 py-2 rounded shadow-lg"
         >
-            ✅ Ingreso registrado correctamente
+            ✅ Venta registrada correctamente
         </div>
     </div>
 
@@ -33,28 +33,35 @@
     {{-- DATOS DEL INGRESO --}}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div>
-            <label class="block text-sm">Proveedor</label>
-            <select wire:model.live="proveedor_id" class="w-full border rounded px-2 py-1" required>
-                <option value="">Seleccionar..</option>
-                @foreach ($proveedores as $proveedor)
-                    <option value="{{ $proveedor->id }}">{{ $proveedor->nombre }}</option>
+            <label class="block text-sm">Cliente</label>
+            <select wire:model.live="cliente_id" class="w-full border rounded px-2 py-1">
+                <option value="13">Selecciona...</option>
+                @foreach ($clientes as $cliente)
+                    <option value="{{ $cliente->id }}">{{ $cliente->nombre }}</option>
                 @endforeach
             </select>
         </div>
 
         <div>
-            <label class="block text-sm">Tipo de comprobante</label>
-            <input wire:model.live="tipo_comprobante" type="text" class="w-full border rounded px-2 py-1
-            @if(!$proveedor_id) bg-gray-100 text-gray-500 cursor-not-allowed @endif"
-            @disabled(!$proveedor_id)>
+            <label class="block text-sm">Forma de pago</label>
+            <select wire:model.live="forma_pago" class="w-full border rounded px-2 py-1" required>
+                <option value="Efectivo">Efectivo</option>
+                <option value="Tarjeta">Tarjeta</option>
+                <option value="Transferencia">Transferencia</option>
+                <option value="Valores">Valores</option>
+                <option value="Divisas">Divisas</option>
+            </select>
         </div>
 
         <div>
-            <label class="block text-sm">Número</label>
-            <input wire:model.live="numero_comprobante" type="text" class="w-full border rounded px-2 py-1
-            @if(!$proveedor_id) bg-gray-100 text-gray-500 cursor-not-allowed @endif"
-            @disabled(!$proveedor_id)>
+            <label class="block text-sm">Tipo Comprobante</label>
+            <select wire:model.live="tipo_comprobante" class="w-full border rounded px-2 py-1" required>
+                <option value="Ticket">Ticket</option>
+                <option value="Factura A">Factura A</option>
+                <option value="Factura B">Factura B</option>
+            </select>
         </div>
+
     </div>
 
     <hr class="mb-4">
@@ -65,17 +72,26 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         <div>
             <label class="block text-sm">Codigo</label>
-            <input wire:model="codigo_barra"  wire:keydown.enter="agregarArticulo"  type="text" class="w-full border rounded px-2 py-1
-            @if(!$proveedor_id) bg-gray-100 text-gray-500 cursor-not-allowed @endif"
-            @disabled(!$proveedor_id) required>
+            <input wire:model="codigo_barra"  wire:keydown.enter="agregarArticulo"  type="text" class="w-full border rounded px-2 py-1" required>
         </div>
 
         <div>
             <label class="block text-sm">Cantidad</label>
-            <input wire:model.live="cantidad" type="number" class="w-full border rounded px-2 py-1
-            @if(!$proveedor_id) bg-gray-100 text-gray-500 cursor-not-allowed @endif"
-            @disabled(!$proveedor_id)>
+            <input wire:model.live="cantidad" type="number" class="w-full border rounded px-2 py-1">
         </div>
+
+        <div>
+            <label class="block text-sm">Descuento</label>
+            <div class="relative">
+                <input
+                    wire:model.live="descuento"
+                    type="number"
+                    class="w-full pr-10 border rounded px-2 py-1"
+                >
+                <span class="absolute inset-y-0 right-2 flex items-center text-gray-500 text-sm pointer-events-none">%</span>
+            </div>
+        </div>
+
 
         <div class="flex items-end">
             <button wire:click="agregarArticulo" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
@@ -91,9 +107,9 @@
                 <tr>
                     <th class="px-4 py-2 text-left text-sm text-gray-700">Articulo</th>
                     <th class="px-4 py-2 text-left text-sm text-gray-700">Rubro</th>
-                    <th class="px-4 py-2 text-left text-sm text-gray-700">Código Proveedor</th>
                     <th class="px-4 py-2 text-left text-sm text-gray-700">Cantidad</th>
-                    <th class="px-4 py-2 text-right text-sm text-gray-700">Precio Unitario</th>
+                    <th class="px-4 py-2 text-right text-sm text-gray-700">Precio</th>
+                    <th class="px-4 py-2 text-right text-sm text-gray-700">Descuento</th>
                     <th class="px-4 py-2 text-center text-sm text-gray-700">Subtotal</th>
                      <th class="px-4 py-2 text-center text-sm text-gray-700">Acciones</th>
                     
@@ -105,9 +121,9 @@
                         
                         <td class="px-4 py-2">{{ $item['nombre'] }}</td>
                         <td class="px-4 py-2">{{ $item['rubro'] }}</td>
-                        <td class="px-4 py-2">{{ $item['codigo_proveedor'] }}</td>
                         <td class="px-4 py-2">{{ $item['cantidad'] }}</td>
                         <td class="px-4 py-2 text-right">${{ number_format($item['precio_unitario']), 0}}</td>
+                        <td class="px-4 py-2 text-right">{{ number_format($item['descuento_unitario']), 0}}%</td>
                         <td class="px-4 py-2 text-right">${{ number_format($item['subtotal'], 0) }}</td>
                         <td class="px-4 py-2 text-center">
                             <button wire:click="eliminarItem({{ $index }})" class="text-red-600">Eliminar</button>
@@ -132,43 +148,8 @@
     {{-- BOTÓN GUARDAR --}}
     <div class="text-right">
         <x-button wire:click="guardar" class="text-white px-4 py-2 rounded">
-            Guardar ingreso
+            Finalizar Venta
         </x-button>
     </div>
-
-    <x-modal wire:model.live="mostrarModal">
-        <div class="p-4">
-            <h2 class="text-lg font-semibold mb-4">Crear nuevo artículo</h2>
-
-            @if ($referenciaSeleccionada)
-                <div class="mb-4 space-y-2">
-                    <p><strong>Articulo:</strong> {{ $referenciaSeleccionada['articulo'] ?? '' }}</p>
-                    <p><strong>Código:</strong> {{ $referenciaSeleccionada['codigo_rsf'] ?? '' }}</p>
-                    <p><strong>Rubro:</strong> {{ $referenciaSeleccionada['tipo_txt'] ?? '' }}</p>
-                    <p><strong>Precio:</strong> {{ $referenciaSeleccionada['precio_lista'] ?? '' }}</p>
-                    <p><strong>Marca:</strong> {{ $referenciaSeleccionada['marca_rsf'] ?? '' }}</p>
-                    <p><strong>Modulo de Venta:</strong> {{ $referenciaSeleccionada['modulo_venta'] ?? '' }}</p>
-                    <p><strong>Descripcion:</strong> {{ $referenciaSeleccionada['descripcion'] ?? '' }}</p>
-                </div>
-            @endif
-
-            <div class="flex justify-end gap-2">
-                <button
-                    wire:click="confirmarCreacionArticulo"
-                    class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                >
-                    Confirmar creación
-                </button>
-                <button
-                    wire:click="$set('mostrarModal', false)"
-                    class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-                >
-                    Cancelar
-                </button>
-            </div>
-        </div>
-    </x-modal>
-
-
 
 </div>

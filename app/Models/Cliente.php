@@ -15,6 +15,7 @@ class Cliente extends Model
         'telefono',
         'direccion',
         'email',
+        'percepcion_iva',
         'cuit_cuil',
         'tipo_cliente',
     ];
