@@ -152,4 +152,42 @@
         </x-button>
     </div>
 
+    <x-modal wire:model.live="modalSeleccionarArticulo">
+        <div class="p-6 bg-gray-50 min-h-screen">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Seleccione su artículo</h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                @foreach ($articulosModal as $articulo)
+                    <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition p-5 flex flex-col justify-between">
+                        <div class="space-y-2">
+                            <p class="text-gray-700"><span class="font-semibold">Artículo:</span> {{ $articulo->articulo ?? '' }}</p>
+                            <p class="text-blue-800"><span class="font-semibold">Marca:</span> {{ $articulo->marca ?? '' }}</p>
+                            <p class="text-gray-700"><span class="font-semibold">Rubro:</span> {{ $articulo->rubro ?? '' }}</p>
+                            <p class="text-gray-700"><span class="font-semibold">Precio:</span> {{ $articulo->precio ?? '' }}</p>
+                        </div>
+
+                        <div class="mt-4 flex justify-end">
+                            <button
+                                wire:click="confirmarSeleccion({{ $articulo->id }})"
+                                class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+                            >
+                                Seleccionar
+                            </button>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="flex justify-end mt-8">
+                <button
+                    wire:click="$set('mostrarModalDuplicados', false)"
+                    class="bg-gray-500 text-white px-5 py-2 rounded-lg hover:bg-gray-600 transition"
+                >
+                    Cancelar
+                </button>
+            </div>
+        </div>
+
+    </x-modal>
+
 </div>

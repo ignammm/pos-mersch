@@ -143,10 +143,10 @@
                 @foreach ($articulosDuplicados as $articulo)
                     <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition p-5 flex flex-col justify-between">
                         <div class="space-y-2">
-                            <p class="text-gray-700"><span class="font-semibold">Artículo:</span> {{ $articulo->articulo ?? '' }}</p>
-                            <p class="text-blue-800"><span class="font-semibold">Marca:</span> {{ $articulo->marca_rsf ?? '' }}</p>
-                            <p class="text-gray-700"><span class="font-semibold">Rubro:</span> {{ $articulo->tipo_txt ?? '' }}</p>
-                            <p class="text-gray-700"><span class="font-semibold">Precio:</span> {{ $articulo->precio_lista ?? '' }}</p>
+                            <p class="text-gray-700"><span class="font-semibold">Artículo:</span> {{ $articulo->nombre ?? '' }}</p>
+                            <p class="text-blue-800"><span class="font-semibold">Marca:</span> {{ $articulo->marca ?? '' }}</p>
+                            <p class="text-gray-700"><span class="font-semibold">Rubro:</span> {{ $articulo->rubro ?? '' }}</p>
+                            <p class="text-gray-700"><span class="font-semibold">Precio:</span> {{ $articulo->precio ?? '' }}</p>
                         </div>
 
                         <div class="mt-4 flex justify-end">

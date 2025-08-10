@@ -18,6 +18,8 @@ class VentaCreate extends Component
     public $codigo_barra, $cantidad = 1, $descuento = 0;
     public $items = [];
     public $total = 0;
+    public $modalSeleccionarArticulo = false;
+    public $articulosModal = [];
 
     public function agregarArticulo()
     {
@@ -27,8 +29,15 @@ class VentaCreate extends Component
             'descuento' => 'numeric|min:0',
         ]);
 
+        if (Articulo::where('articulo', $this->codigo_barra)->count() > 1)
+        {
+            $articulosModal = Articulo::where('articulo', $this->codigo_barra)->get();
+            $modalSeleccionarArticulo = true;
+        }
+
         $articulo = Articulo::where('codigo_proveedor', $this->codigo_barra)
             ->orWhere('codigo_fabricante', $this->codigo_barra)
+            ->orWhere('articulo', $this->codigo_barra)
             ->first();
 
         if (!$articulo) {
