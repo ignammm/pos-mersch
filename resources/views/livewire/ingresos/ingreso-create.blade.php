@@ -91,7 +91,6 @@
                 <tr>
                     <th class="px-4 py-2 text-left text-sm text-gray-700">Articulo</th>
                     <th class="px-4 py-2 text-left text-sm text-gray-700">Rubro</th>
-                    <th class="px-4 py-2 text-left text-sm text-gray-700">Código Proveedor</th>
                     <th class="px-4 py-2 text-left text-sm text-gray-700">Cantidad</th>
                     <th class="px-4 py-2 text-right text-sm text-gray-700">Precio Unitario</th>
                     <th class="px-4 py-2 text-center text-sm text-gray-700">Subtotal</th>
@@ -105,7 +104,6 @@
                         
                         <td class="px-4 py-2">{{ $item['nombre'] }}</td>
                         <td class="px-4 py-2">{{ $item['rubro'] }}</td>
-                        <td class="px-4 py-2">{{ $item['codigo_proveedor'] }}</td>
                         <td class="px-4 py-2">{{ $item['cantidad'] }}</td>
                         <td class="px-4 py-2 text-right">${{ number_format($item['precio_unitario']), 0}}</td>
                         <td class="px-4 py-2 text-right">${{ number_format($item['subtotal'], 0) }}</td>
@@ -136,39 +134,7 @@
         </x-button>
     </div>
 
-    <x-modal wire:model.live="mostrarModal">
-        <div class="p-4">
-            <h2 class="text-lg font-semibold mb-4">Crear nuevo artículo</h2>
-
-            @if ($referenciaSeleccionada)
-                <div class="mb-4 space-y-2">
-                    <p><strong>Articulo:</strong> {{ $referenciaSeleccionada['articulo'] ?? '' }}</p>
-                    <p><strong>Código:</strong> {{ $referenciaSeleccionada['codigo_rsf'] ?? '' }}</p>
-                    <p><strong>Rubro:</strong> {{ $referenciaSeleccionada['tipo_txt'] ?? '' }}</p>
-                    <p><strong>Precio:</strong> {{ $referenciaSeleccionada['precio_lista'] ?? '' }}</p>
-                    <p><strong>Marca:</strong> {{ $referenciaSeleccionada['marca_rsf'] ?? '' }}</p>
-                    <p><strong>Modulo de Venta:</strong> {{ $referenciaSeleccionada['modulo_venta'] ?? '' }}</p>
-                    <p><strong>Descripcion:</strong> {{ $referenciaSeleccionada['descripcion'] ?? '' }}</p>
-                </div>
-            @endif
-
-            <div class="flex justify-end gap-2">
-                <button
-                    wire:click="confirmarCreacionArticulo"
-                    class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                >
-                    Confirmar creación
-                </button>
-                <button
-                    wire:click="$set('mostrarModal', false)"
-                    class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-                >
-                    Cancelar
-                </button>
-            </div>
-        </div>
-    </x-modal>
-
+  
     <x-modal wire:model.live="mostrarModalDuplicados">
         <div class="p-6 bg-gray-50 min-h-screen">
             <h2 class="text-2xl font-bold mb-6 text-gray-800">Seleccione su artículo</h2>

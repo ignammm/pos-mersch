@@ -18,7 +18,7 @@ class IngresoCreate extends Component
     public $codigo_barra;
     public $items = [];
     public $referenciaSeleccionada;
-    public $mostrarModal = false;
+  
     public $existen_duplicados = false;
     public $articulosDuplicados = [];
     public $mostrarModalDuplicados = false;
@@ -31,98 +31,49 @@ class IngresoCreate extends Component
             'cantidad' => 'required|numeric|min:1',
         ]);
 
-        $existe = ReferenciaRsf::where('codigo_rsf', $this->codigo_barra)
-        ->orWhere('codigo_barra', $this->codigo_barra)
-        ->orWhere('articulo', $this->codigo_barra)
-        ->exists();
-
-        if (!$existe) {
-            $this->addError('codigo_barra', 'No se ha encontrado ningun codigo coincidente, vuelve a intentar.');
-            return;
-        }
-        
-        $articulo = Articulo::where('codigo_proveedor', $this->codigo_barra)
-        ->orWhere('codigo_fabricante', $this->codigo_barra)
-        ->orWhere('articulo', $this->codigo_barra)
-        ->first();
-
-        $duplicados = ReferenciaRsf::where('articulo', $this->codigo_barra)
-        ->count();
-
-        if ($duplicados > 1)
-        {
-            $this->articulosDuplicados = ReferenciaRsf::Where('articulo', $this->codigo_barra)
-            ->get();
-
-            $this->existen_duplicados = true;
-            $this->mostrarModalDuplicados = true;
-            return;
-        }
-        
-        if (!$articulo) {
-            
-        
-            $referencia = ReferenciaRsf::where('codigo_rsf', $this->codigo_barra)
+        // 1️⃣ Verificar si existe en referencias
+        $coincidencias = ReferenciaRsf::where('codigo_rsf', $this->codigo_barra)
             ->orWhere('codigo_barra', $this->codigo_barra)
             ->orWhere('articulo', $this->codigo_barra)
-            ->first();
-    
-            if ($referencia) {
-                $this->referenciaSeleccionada = $referencia->toArray();
-                $this->mostrarModal = true;
-            } else {
-                $this->addError('codigo_barra', 'Código no encontrado en referencias.');
-            }
-            
+            ->get();
+
+        if ($coincidencias->isEmpty()) {
+            $this->addError('codigo_barra', 'No se ha encontrado ningún código coincidente.');
             return;
         }
 
-        
-        if ($articulo->codigo_proveedor === $this->codigo_barra) {
-            $this->codigo_proveedor = $this->codigo_barra;
-            $this->codigo_fabricante = $articulo->codigo_fabricante;
-        }
-        else {
-            $this->codigo_fabricante = $this->codigo_barra;
-            $this->codigo_proveedor = $articulo->codigo_proveedor;
-        }
+        // 2️⃣ Verificar si ya existe en artículos
+        $articuloExistente = Articulo::where('codigo_proveedor', $this->codigo_barra)
+            ->orWhere('codigo_fabricante', $this->codigo_barra)
+            ->orWhere('articulo', $this->codigo_barra)
+            ->first();
 
-        if ($articulo) {
-            // Buscar si ya existe el artículo en los items
+        if ($articuloExistente) {
+            // Buscar si ya está en la lista para sumar cantidades
             foreach ($this->items as $index => $item) {
-                if ($item['codigo_proveedor'] === $this->codigo_barra or
-                    $item['codigo_fabricante'] === $this->codigo_barra or
-                    $item['nombre'] === $this->codigo_barra) {
-                    // Sumar cantidad y actualizar subtotal
+                if (
+                    $item['codigo_proveedor'] === $articuloExistente->codigo_proveedor ||
+                    $item['codigo_fabricante'] === $articuloExistente->codigo_fabricante ||
+                    $item['nombre'] === $articuloExistente->articulo
+                ) {
                     $this->items[$index]['cantidad'] += $this->cantidad;
                     $this->items[$index]['subtotal'] = $this->items[$index]['cantidad'] * $this->items[$index]['precio_unitario'];
-
                     $this->calcularTotal();
-
-                    // Limpiar input y salir
                     $this->codigo_barra = '';
                     $this->cantidad = 1;
                     return;
                 }
             }
 
-            // Si no estaba, agregar nuevo artículo
-            $this->items[] = [
-                'articulo_id' => $articulo->id,
-                'nombre' => $articulo->articulo,
-                'rubro' => $articulo->rubro,
-                'codigo_proveedor' => $this->codigo_proveedor,
-                'codigo_fabricante' => $this->codigo_fabricante,
-                'cantidad' => $this->cantidad,
-                'precio_unitario' => $articulo->precio,
-                'subtotal' => ($this->cantidad * $articulo->precio),
-            ];
-
-            $this->calcularTotal();
+            // Si no estaba en la lista, agregarlo directo
+            $this->agregarArticuloListado($articuloExistente);
+            return;
         }
 
-        $this->codigo_barra = '';
-        $this->cantidad = 1;
+        // 3️⃣ Siempre mostrar el modal (aunque haya solo una coincidencia)
+        $this->articulosDuplicados = $coincidencias;
+        $this->existen_duplicados = true;
+        $this->mostrarModalDuplicados = true;
     }
 
     public function agregarArticuloListado($articulo){
@@ -144,11 +95,18 @@ class IngresoCreate extends Component
 
     }
 
-    public function confirmarSeleccion($id)
+   public function confirmarSeleccion($id)
     {
-        $this->referenciaSeleccionada = ReferenciaRsf::find($id);
-        $this->crearArticulo($this->referenciaSeleccionada);
+        $referencia = ReferenciaRsf::find($id);
+
+        if (!$referencia) {
+            $this->addError('codigo_barra', 'Referencia no encontrada.');
+            return;
+        }
+
+        $this->crearArticulo($referencia);
     }
+
 
     public function crearArticulo($articulo_rsf)
     {
@@ -168,12 +126,13 @@ class IngresoCreate extends Component
 
         $this->agregarArticuloListado($articulo);
 
-        $this->mostrarModal = false;
         $this->mostrarModalDuplicados = false;
+        $this->articulosDuplicados = [];
         $this->referenciaSeleccionada = null;
 
         $this->dispatch('articulo-creado');
     }
+
 
     public function confirmarCreacionArticulo()
     {
@@ -193,7 +152,6 @@ class IngresoCreate extends Component
 
         $this->agregarArticulo();
 
-        $this->mostrarModal = false;
         $this->mostrarModalDuplicados = false;
         $this->referenciaSeleccionada = null;
 
