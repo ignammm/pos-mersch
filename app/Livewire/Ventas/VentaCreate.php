@@ -6,6 +6,7 @@ use App\Models\Articulo;
 use App\Models\Cliente;
 use App\Models\DetalleVenta;
 use App\Models\Factura;
+use App\Models\Pedido;
 use App\Models\Stock;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -35,11 +36,23 @@ class VentaCreate extends Component
             return;
         }
 
+        if($articulo->stock->cantidad < $this->cantidad)
+        {
+            $this->addError('cantidad', 'La cantidad que intenta vender supera el stock.');
+            return;
+        }
+
         foreach ($this->items as $index => $item) {
             if (
                 $item['codigo_proveedor'] === $this->codigo_barra ||
-                $item['codigo_fabricante'] === $this->codigo_barra
+                $item['codigo_fabricante'] === $this->codigo_barra ||
+                $item['nombre'] === $this->codigo_barra
             ) {
+                if(($this->items[$index]['cantidad'] + $this->cantidad) > $articulo->stock->cantidad)
+                {
+                    $this->addError('cantidad', 'La cantidad que intenta vender supera el stock.');
+                    return;
+                }
                 $this->items[$index]['cantidad'] += $this->cantidad;
                 $this->items[$index]['subtotal'] = $this->calcularSubtotal(
                     $this->items[$index]['precio_unitario'],

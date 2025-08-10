@@ -33,6 +33,12 @@ class Articulo extends Model
         return $this->hasOne(Stock::class);
     }
 
+    public function pedidos()
+    {
+        return $this->hasMany(Pedido::class);
+    }
+
+
     public static function generarCodigoInterno(): string
     {
         $ultimo = Articulo::max('id') ?? 0;

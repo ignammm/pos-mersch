@@ -19,6 +19,9 @@ class IngresoCreate extends Component
     public $items = [];
     public $referenciaSeleccionada;
     public $mostrarModal = false;
+    public $existen_duplicados = false;
+    public $articulosDuplicados = [];
+    public $mostrarModalDuplicados = false;
 
 
     public function agregarArticulo()
@@ -30,29 +33,47 @@ class IngresoCreate extends Component
 
         $existe = ReferenciaRsf::where('codigo_rsf', $this->codigo_barra)
         ->orWhere('codigo_barra', $this->codigo_barra)
+        ->orWhere('articulo', $this->codigo_barra)
         ->exists();
 
         if (!$existe) {
-            $this->addError('codigo_barra', 'El código ingresado no existe en la base de datos, deberá crearlo manualmente.');
+            $this->addError('codigo_barra', 'No se ha encontrado ningun codigo coincidente, vuelve a intentar.');
             return;
         }
-
+        
         $articulo = Articulo::where('codigo_proveedor', $this->codigo_barra)
         ->orWhere('codigo_fabricante', $this->codigo_barra)
+        ->orWhere('articulo', $this->codigo_barra)
         ->first();
 
+        $duplicados = ReferenciaRsf::where('articulo', $this->codigo_barra)
+        ->count();
+
+        if ($duplicados > 1)
+        {
+            $this->articulosDuplicados = ReferenciaRsf::Where('articulo', $this->codigo_barra)
+            ->get();
+
+            $this->existen_duplicados = true;
+            $this->mostrarModalDuplicados = true;
+            return;
+        }
+        
         if (!$articulo) {
+            
+        
             $referencia = ReferenciaRsf::where('codigo_rsf', $this->codigo_barra)
             ->orWhere('codigo_barra', $this->codigo_barra)
+            ->orWhere('articulo', $this->codigo_barra)
             ->first();
-
+    
             if ($referencia) {
                 $this->referenciaSeleccionada = $referencia->toArray();
                 $this->mostrarModal = true;
             } else {
                 $this->addError('codigo_barra', 'Código no encontrado en referencias.');
             }
-
+            
             return;
         }
 
@@ -69,7 +90,9 @@ class IngresoCreate extends Component
         if ($articulo) {
             // Buscar si ya existe el artículo en los items
             foreach ($this->items as $index => $item) {
-                if ($item['codigo_proveedor'] === $this->codigo_barra or $item['codigo_fabricante'] === $this->codigo_barra) {
+                if ($item['codigo_proveedor'] === $this->codigo_barra or
+                    $item['codigo_fabricante'] === $this->codigo_barra or
+                    $item['nombre'] === $this->codigo_barra) {
                     // Sumar cantidad y actualizar subtotal
                     $this->items[$index]['cantidad'] += $this->cantidad;
                     $this->items[$index]['subtotal'] = $this->items[$index]['cantidad'] * $this->items[$index]['precio_unitario'];
@@ -102,6 +125,56 @@ class IngresoCreate extends Component
         $this->cantidad = 1;
     }
 
+    public function agregarArticuloListado($articulo){
+
+        $this->items[] = [
+                'articulo_id' => $articulo->id,
+                'nombre' => $articulo->articulo,
+                'rubro' => $articulo->rubro,
+                'codigo_proveedor' => $this->codigo_proveedor,
+                'codigo_fabricante' => $this->codigo_fabricante,
+                'cantidad' => $this->cantidad,
+                'precio_unitario' => $articulo->precio,
+                'subtotal' => ($this->cantidad * $articulo->precio),
+        ];
+
+        $this->calcularTotal();
+        $this->codigo_barra = '';
+        $this->cantidad = 1;
+
+    }
+
+    public function confirmarSeleccion($id)
+    {
+        $this->referenciaSeleccionada = ReferenciaRsf::find($id);
+        $this->crearArticulo($this->referenciaSeleccionada);
+    }
+
+    public function crearArticulo($articulo_rsf)
+    {
+        $articulo = Articulo::create([
+            'articulo' => $articulo_rsf->articulo,
+            'codigo_interno' => Articulo::generarCodigoInterno(),
+            'codigo_proveedor' => $articulo_rsf->codigo_rsf,
+            'codigo_fabricante' => $articulo_rsf->codigo_barra,
+            'rubro' => $articulo_rsf->tipo_txt,
+            'precio' => round($articulo_rsf->precio_lista, 0),
+            'marca' => $articulo_rsf->marca_rsf,
+            'descripcion' => $articulo_rsf->descripcion,
+            'enlace' => $articulo_rsf->enlace,
+            'unidad' => $articulo_rsf->modulo_venta,
+            'proveedor_id' => $this->proveedor_id,
+        ]);
+
+        $this->agregarArticuloListado($articulo);
+
+        $this->mostrarModal = false;
+        $this->mostrarModalDuplicados = false;
+        $this->referenciaSeleccionada = null;
+
+        $this->dispatch('articulo-creado');
+    }
+
     public function confirmarCreacionArticulo()
     {
         Articulo::create([
@@ -121,6 +194,7 @@ class IngresoCreate extends Component
         $this->agregarArticulo();
 
         $this->mostrarModal = false;
+        $this->mostrarModalDuplicados = false;
         $this->referenciaSeleccionada = null;
 
         $this->dispatch('articulo-creado');
