@@ -7,7 +7,6 @@ use App\Models\DetalleIngresos;
 use App\Models\Ingreso;
 use App\Models\Proveedor;
 use App\Models\ReferenciaRsf;
-use App\Models\Stock;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
@@ -23,6 +22,9 @@ class IngresoCreate extends Component
     public $articulosDuplicados = [];
     public $mostrarModalDuplicados = false;
 
+    public $coincidenciasArt;
+    public $coincidenciasRef;
+
 
    public function agregarArticulo()
     {
@@ -31,71 +33,69 @@ class IngresoCreate extends Component
             'cantidad' => 'required|numeric|min:1',
         ]);
 
-       $coincidenciasArt = Articulo::where('articulo', $this->codigo_barra)
-            ->get()
-            ->map(fn($art) => (object) [
-                'id' => $art->id,
-                'nombre' => $art->articulo,
-                'precio' => $art->precio,
-                'marca' => $art->marca,
-                'rubro' => $art->rubro
-            ]);
+        //Buscar si existen articulos que compartan el mismo codigo articulo (coincidentes)
+        $this->coincidenciasArt = Articulo::where('articulo', $this->codigo_barra)
+            ->get();
 
-        $coincidenciasRef = ReferenciaRsf::where('articulo', $this->codigo_barra)
-            ->get()
-            ->map(fn($ref) => (object) [
-                'id' => $ref->id ?? null,
-                'nombre' => $ref->articulo,
-                'precio' => $ref->precio_lista,
-                'marca' => $ref->marca_rsf ?? null,
-                'rubro' => $ref->tipo_txt
-            ]);
+        $this->coincidenciasRef = ReferenciaRsf::where('articulo', $this->codigo_barra)
+            ->get();
 
-       
-
-        // Si no hay coincidencias en ninguno
-        if ($coincidenciasRef->isEmpty() && $coincidenciasArt->isEmpty()) {
-            $this->addError('codigo_barra', 'No se ha encontrado ningún código coincidente.');
-            return;
-        }
-
-        // Unimos coincidencias (puedes adaptar según necesites)
-        $coincidencias = collect($coincidenciasArt) // fuerza a colección normal
-        ->merge($coincidenciasRef)
-        ->unique('marca')
-        ->values();
-
-
+        // Unimos coincidencias
+        // $coincidencias = collect($coincidenciasArt) // fuerza a colección normal
+        // ->merge($coincidenciasRef)
+        // ->unique('marca')
+        // ->values();
         
-        // Si hay más de una coincidencia → mostrar modal
-        if ($coincidencias->count() > 1) {
-            $this->articulosDuplicados = $coincidencias;
+        // Si hay coincidencia → mostrar modal
+        if ($this->coincidenciasArt->count() > 1 or $this->coincidenciasRef->count() > 1) {
             $this->existen_duplicados = true;
             $this->mostrarModalDuplicados = true;
             return;
         }
 
-        // Si hay solo una coincidencia → agregar directo
-        $articulo = $coincidencias->first();
+        // Si hay solo hay un articulo con ese codigo → agregar directo
+        $articulo = Articulo::where('codigo_proveedor', $this->codigo_barra)
+        ->orWhere('codigo_proveedor', $this->codigo_barra)
+        ->orWhere('articulo', $this->codigo_barra)
+        ->first();
 
         // Verificar si ya está en la lista para sumar cantidades
+        if ($this->sumarCantidadSiExiste($articulo)) {
+            return;
+        }
+
+        $referenciaRsf = ReferenciaRsf::where('codigo_rsf', $this->codigo_barra)
+        ->orWhere('codigo_barra', $this->codigo_barra)
+        ->orWhere('articulo', $this->codigo_barra)
+        ->first();
+
+        $this->crearArticulo($referenciaRsf);
+    }
+
+    private function sumarCantidadSiExiste($articulo)
+    {
         foreach ($this->items as $index => $item) {
             if (
-                $item['codigo_proveedor'] === $articulo->codigo_proveedor ||
-                $item['codigo_fabricante'] === $articulo->codigo_fabricante ||
-                $item['nombre'] === $articulo->articulo
+                $item['articulo_id'] === $articulo->id
             ) {
                 $this->items[$index]['cantidad'] += $this->cantidad;
                 $this->items[$index]['subtotal'] = $this->items[$index]['cantidad'] * $this->items[$index]['precio_unitario'];
                 $this->calcularTotal();
                 $this->codigo_barra = '';
                 $this->cantidad = 1;
-                return;
+
+                $this->mostrarModalDuplicados = false;
+                $this->coincidenciasArt = '';
+                $this->coincidenciasRef = '';
+                $this->referenciaSeleccionada = null;
+
+                return true; // ya existía y se sumó
             }
         }
 
-        $this->agregarArticuloListado($articulo);
+        return false; // no existía
     }
+
 
     public function agregarArticuloListado($articulo){
 
@@ -103,8 +103,9 @@ class IngresoCreate extends Component
                 'articulo_id' => $articulo->id,
                 'nombre' => $articulo->articulo,
                 'rubro' => $articulo->rubro,
-                'codigo_proveedor' => $this->codigo_proveedor,
-                'codigo_fabricante' => $this->codigo_fabricante,
+                'marca' => $articulo->marca,
+                'codigo_proveedor' => $articulo->codigo_proveedor,
+                'codigo_fabricante' => $articulo->codigo_fabricante,
                 'cantidad' => $this->cantidad,
                 'precio_unitario' => $articulo->precio,
                 'subtotal' => ($this->cantidad * $articulo->precio),
@@ -114,50 +115,58 @@ class IngresoCreate extends Component
         $this->codigo_barra = '';
         $this->cantidad = 1;
 
+        $this->mostrarModalDuplicados = false;
+        $this->coincidenciasArt = '';
+        $this->coincidenciasRef = '';
+        $this->referenciaSeleccionada = null;
+
     }
 
-   public function confirmarSeleccion($id)
+    public function confirmarSeleccionArt($id)
     {
         $articulo = Articulo::find($id);
-        $referencia = ReferenciaRsf::find($id);
-
-        if (!$referencia and !$articulo) {
-            $this->addError('codigo_barra', 'Referencia no encontrada.');
+        if ($this->sumarCantidadSiExiste($articulo)) {
             return;
         }
+        $this->agregarArticuloListado($articulo);
+       
+    }
 
-        if ($articulo) {
-            $this->agregarArticuloListado($articulo);  
-            return; 
-        }
-
-        $this->crearArticulo($referencia);  
+    public function confirmarSeleccionRef($id)
+    {
+        $this->crearArticulo(ReferenciaRsf::find($id));
     }
 
 
     public function crearArticulo($articulo_rsf)
     {
-        $articulo = Articulo::create([
-            'articulo' => $articulo_rsf->articulo,
-            'codigo_interno' => Articulo::generarCodigoInterno(),
-            'codigo_proveedor' => $articulo_rsf->codigo_rsf,
-            'codigo_fabricante' => $articulo_rsf->codigo_barra,
-            'rubro' => $articulo_rsf->tipo_txt,
-            'precio' => round($articulo_rsf->precio_lista, 0),
-            'marca' => $articulo_rsf->marca_rsf,
-            'descripcion' => $articulo_rsf->descripcion,
-            'enlace' => $articulo_rsf->enlace,
-            'unidad' => $articulo_rsf->modulo_venta,
-            'proveedor_id' => $this->proveedor_id,
-        ]);
 
-        $this->agregarArticuloListado($articulo);
+        if (!Articulo::where('codigo_proveedor', $articulo_rsf->codigo_rsf)->exists()) {
+            $articulo = Articulo::create([
+                'articulo' => $articulo_rsf->articulo,
+                'codigo_interno' => Articulo::generarCodigoInterno(),
+                'codigo_proveedor' => $articulo_rsf->codigo_rsf,
+                'codigo_fabricante' => $articulo_rsf->codigo_barra,
+                'rubro' => $articulo_rsf->tipo_txt,
+                'precio' => round($articulo_rsf->precio_lista, 0),
+                'marca' => $articulo_rsf->marca_rsf,
+                'descripcion' => $articulo_rsf->descripcion,
+                'enlace' => $articulo_rsf->enlace,
+                'unidad' => $articulo_rsf->modulo_venta,
+                'proveedor_id' => $this->proveedor_id,
+            ]);
 
+            $this->agregarArticuloListado($articulo);
+
+            return;
+        }
+
+        $this->addError('codigo_barra', 'El articulo que intenta crear ya ha sido creado.');
         $this->mostrarModalDuplicados = false;
-        $this->articulosDuplicados = [];
+        $this->coincidenciasArt = '';
+        $this->coincidenciasRef = '';
         $this->referenciaSeleccionada = null;
 
-        $this->dispatch('articulo-creado');
     }
 
 
