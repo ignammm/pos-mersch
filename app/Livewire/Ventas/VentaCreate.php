@@ -19,7 +19,7 @@ class VentaCreate extends Component
     public $items = [];
     public $total = 0;
     public $modalSeleccionarArticulo = false;
-    public $articulosModal = [];
+    public $articulosModal;
 
     public function agregarArticulo()
     {
@@ -31,8 +31,9 @@ class VentaCreate extends Component
 
         if (Articulo::where('articulo', $this->codigo_barra)->count() > 1)
         {
-            $articulosModal = Articulo::where('articulo', $this->codigo_barra)->get();
-            $modalSeleccionarArticulo = true;
+            $this->articulosModal = Articulo::where('articulo', $this->codigo_barra)->get();
+            $this->modalSeleccionarArticulo = true;
+            return;
         }
 
         $articulo = Articulo::where('codigo_proveedor', $this->codigo_barra)
@@ -45,17 +46,38 @@ class VentaCreate extends Component
             return;
         }
 
-        if($articulo->stock->cantidad < $this->cantidad)
-        {
-            $this->addError('cantidad', 'La cantidad que intenta vender supera el stock.');
+        if ($this->stockSuperado($articulo)) {
             return;
         }
 
+        if ($this->verificarExisteEnLista($articulo)) {
+            return;
+        }
+
+        $this->agregarArticuloLista($articulo);
+
+        $this->calcularTotal();
+        $this->reset(['codigo_barra', 'cantidad', 'descuento']);
+        $this->modalSeleccionarArticulo = false;
+    }
+
+    public function stockSuperado($articulo)
+    {
+        
+        if (Articulo::find($articulo->id)->stock->cantidad > $this->cantidad) {
+            $this->addError('cantidad', 'La cantidad que intenta vender supera el stock.');
+            $this->reset(['cantidad']);
+            $this->modalSeleccionarArticulo = false;
+            return true;
+        }
+        return false;
+    }
+
+    public function verificarExisteEnLista($articulo)
+    {
         foreach ($this->items as $index => $item) {
             if (
-                $item['codigo_proveedor'] === $this->codigo_barra ||
-                $item['codigo_fabricante'] === $this->codigo_barra ||
-                $item['nombre'] === $this->codigo_barra
+                $item['articulo_id'] === $articulo->id
             ) {
                 if(($this->items[$index]['cantidad'] + $this->cantidad) > $articulo->stock->cantidad)
                 {
@@ -69,25 +91,39 @@ class VentaCreate extends Component
                     $this->items[$index]['descuento_unitario']
                 );
                 $this->calcularTotal();
-                $this->reset(['codigo_barra', 'cantidad', 'descuento']);
-                return;
+                $this->reset(['codigo_barra']);
+                return true;
             }
+
+            return false;
+        }
+    }
+
+    public function agregarArticuloLista($articulo)
+    {
+        if ($this->stockSuperado($articulo)) {
+            return;
         }
 
-        $this->items[] = [
-            'articulo_id' => $articulo->id,
-            'nombre' => $articulo->articulo,
-            'rubro' => $articulo->rubro,
-            'codigo_proveedor' => $articulo->codigo_proveedor,
-            'codigo_fabricante' => $articulo->codigo_fabricante,
-            'cantidad' => $this->cantidad,
-            'precio_unitario' => $this->descuentoUnitario($articulo->precio, $this->descuento),
-            'descuento_unitario' => $this->descuento,
-            'subtotal' => $this->calcularSubtotal($this->descuentoUnitario($articulo->precio, $this->descuento), $this->cantidad),
-        ];
+        if (!$this->verificarExisteEnLista($articulo)) {
+            
+            $this->items[] = [
+                'articulo_id' => $articulo->id,
+                'nombre' => $articulo->articulo,
+                'rubro' => $articulo->rubro,
+                'marca' => $articulo->marca,
+                'codigo_proveedor' => $articulo->codigo_proveedor,
+                'codigo_fabricante' => $articulo->codigo_fabricante,
+                'cantidad' => $this->cantidad,
+                'precio_unitario' => $this->descuentoUnitario($articulo->precio, $this->descuento),
+                'descuento_unitario' => $this->descuento,
+                'subtotal' => $this->calcularSubtotal($this->descuentoUnitario($articulo->precio, $this->descuento), $this->cantidad),
+            ];
+        }
 
         $this->calcularTotal();
         $this->reset(['codigo_barra', 'cantidad', 'descuento']);
+        $this->modalSeleccionarArticulo = false;
     }
 
     public function calcularSubtotal($precio, $cantidad)
@@ -123,6 +159,14 @@ class VentaCreate extends Component
             $this->items = array_values($this->items);
             $this->calcularTotal();
         }
+    }
+
+    public function confirmarSeleccion($articulo_id)
+    {
+        $articulo = Articulo::find($articulo_id);
+        $this->agregarArticuloLista($articulo);
+            
+
     }
 
     public function guardar()

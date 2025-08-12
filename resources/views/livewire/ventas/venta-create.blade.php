@@ -107,6 +107,7 @@
                 <tr>
                     <th class="px-4 py-2 text-left text-sm text-gray-700">Articulo</th>
                     <th class="px-4 py-2 text-left text-sm text-gray-700">Rubro</th>
+                    <th class="px-4 py-2 text-left text-sm text-gray-700">Marca</th>
                     <th class="px-4 py-2 text-left text-sm text-gray-700">Cantidad</th>
                     <th class="px-4 py-2 text-right text-sm text-gray-700">Precio</th>
                     <th class="px-4 py-2 text-right text-sm text-gray-700">Descuento</th>
@@ -121,6 +122,7 @@
                         
                         <td class="px-4 py-2">{{ $item['nombre'] }}</td>
                         <td class="px-4 py-2">{{ $item['rubro'] }}</td>
+                        <td class="px-4 py-2">{{ $item['marca'] }}</td>
                         <td class="px-4 py-2">{{ $item['cantidad'] }}</td>
                         <td class="px-4 py-2 text-right">${{ number_format($item['precio_unitario']), 0}}</td>
                         <td class="px-4 py-2 text-right">{{ number_format($item['descuento_unitario']), 0}}%</td>
@@ -152,42 +154,63 @@
         </x-button>
     </div>
 
-    <x-modal wire:model.live="modalSeleccionarArticulo">
+   <x-modal wire:model.live="modalSeleccionarArticulo">
         <div class="p-6 bg-gray-50 min-h-screen">
-            <h2 class="text-2xl font-bold mb-6 text-gray-800">Seleccione su artículo</h2>
+            
+            <!-- Título -->
+            <h2 class="text-3xl font-extrabold mb-8 text-gray-900 tracking-tight border-b pb-4">
+                Seleccione su artículo
+            </h2>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                @foreach ($articulosModal as $articulo)
-                    <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition p-5 flex flex-col justify-between">
-                        <div class="space-y-2">
-                            <p class="text-gray-700"><span class="font-semibold">Artículo:</span> {{ $articulo->articulo ?? '' }}</p>
-                            <p class="text-blue-800"><span class="font-semibold">Marca:</span> {{ $articulo->marca ?? '' }}</p>
-                            <p class="text-gray-700"><span class="font-semibold">Rubro:</span> {{ $articulo->rubro ?? '' }}</p>
-                            <p class="text-gray-700"><span class="font-semibold">Precio:</span> {{ $articulo->precio ?? '' }}</p>
+            <!-- Lista de artículos -->
+            @if ($articulosModal && $articulosModal->isNotEmpty())
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+                    @foreach ($articulosModal as $articulo)
+                        <div class="bg-white rounded-2xl shadow hover:shadow-xl transition-transform transform hover:-translate-y-1 p-5 flex flex-col justify-between border border-gray-100">
+                            
+                            <!-- Información -->
+                            <div class="space-y-3">
+                                <p class="text-gray-900 font-semibold text-lg">
+                                    {{ $articulo->articulo ?? '—' }}
+                                </p>
+                                <p class="text-sm text-blue-500">
+                                    <span class="font-medium text-gray-800">Marca:</span> {{ $articulo->marca ?? '—' }}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    <span class="font-medium text-gray-800">Rubro:</span> {{ $articulo->rubro ?? '—' }}
+                                </p>
+                                <p class="text-sm text-green-700 font-semibold">
+                                    ${{ number_format($articulo->precio ?? 0, 2) }}
+                                </p>
+                            </div>
+
+                            <!-- Botón seleccionar -->
+                            <div class="mt-5 flex justify-end">
+                                <button
+                                    wire:click="confirmarSeleccion({{ $articulo->id }})"
+                                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-medium shadow-sm"
+                                >
+                                    Seleccionar
+                                </button>
+                            </div>
                         </div>
+                    @endforeach
+                </div>
+            @else
+                <p class="text-gray-500 text-center">No se encontraron artículos.</p>
+            @endif
 
-                        <div class="mt-4 flex justify-end">
-                            <button
-                                wire:click="confirmarSeleccion({{ $articulo->id }})"
-                                class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
-                            >
-                                Seleccionar
-                            </button>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-
-            <div class="flex justify-end mt-8">
+            <!-- Botón cancelar -->
+            <div class="flex justify-end">
                 <button
-                    wire:click="$set('mostrarModalDuplicados', false)"
-                    class="bg-gray-500 text-white px-5 py-2 rounded-lg hover:bg-gray-600 transition"
+                    wire:click="$set('modalSeleccionarArticulo', false)"
+                    class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition font-medium shadow-sm"
                 >
                     Cancelar
                 </button>
             </div>
         </div>
-
     </x-modal>
+
 
 </div>
