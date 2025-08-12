@@ -71,6 +71,4 @@ class Articulo extends Model
         return $articulo->enlace;
     }
 
-
-
 }

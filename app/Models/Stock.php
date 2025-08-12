@@ -13,4 +13,5 @@ class Stock extends Model
         'articulo_id',
         'cantidad',
     ];
+
 }

@@ -29,28 +29,29 @@ class VentaCreate extends Component
             'descuento' => 'numeric|min:0',
         ]);
 
-        if (Articulo::where('articulo', $this->codigo_barra)->count() > 1)
+        $articulo = Articulo::where('codigo_proveedor', $this->codigo_barra)
+            ->orWhere('codigo_fabricante', $this->codigo_barra)
+            ->orWhere('articulo', $this->codigo_barra)
+            ->get();
+            
+        if (!$articulo) {
+            $this->addError('codigo_barra', 'El código ingresado no existe.');
+            $this->reset(['codigo_barra']);
+            return;
+        }
+
+        if ($articulo->where('articulo', $this->codigo_barra)->count() > 1)
         {
-            $this->articulosModal = Articulo::where('articulo', $this->codigo_barra)->get();
+            $this->articulosModal = $articulo->where('articulo', $this->codigo_barra);
             $this->modalSeleccionarArticulo = true;
             return;
         }
 
-        $articulo = Articulo::where('codigo_proveedor', $this->codigo_barra)
-            ->orWhere('codigo_fabricante', $this->codigo_barra)
-            ->orWhere('articulo', $this->codigo_barra)
-            ->first();
-
-        if (!$articulo) {
-            $this->addError('codigo_barra', 'El código ingresado no existe.');
+        if ($this->stockSuperado($articulo->first())) {
             return;
         }
 
-        if ($this->stockSuperado($articulo)) {
-            return;
-        }
-
-        if ($this->verificarExisteEnLista($articulo)) {
+        if ($this->verificarExisteEnLista($articulo->first())) {
             return;
         }
 
@@ -61,11 +62,17 @@ class VentaCreate extends Component
         $this->modalSeleccionarArticulo = false;
     }
 
+    public function stockDisponible($articulo)
+    {
+        $articulo = Articulo::find($articulo->id);
+        return $articulo->stock->cantidad;
+    }
+
     public function stockSuperado($articulo)
     {
         
-        if (Articulo::find($articulo->id)->stock->cantidad > $this->cantidad) {
-            $this->addError('cantidad', 'La cantidad que intenta vender supera el stock.');
+        if (Articulo::find($articulo->id)->stock->cantidad < $this->cantidad) {
+            $this->addError('cantidad', 'La cantidad que intenta vender supera el stock. El stock disponible es de: '. $this->stockDisponible($articulo) . '.');
             $this->reset(['cantidad']);
             $this->modalSeleccionarArticulo = false;
             return true;
@@ -82,7 +89,8 @@ class VentaCreate extends Component
                 if(($this->items[$index]['cantidad'] + $this->cantidad) > $articulo->stock->cantidad)
                 {
                     $this->addError('cantidad', 'La cantidad que intenta vender supera el stock.');
-                    return;
+                    $this->modalSeleccionarArticulo = false;
+                    return true;
                 }
                 $this->items[$index]['cantidad'] += $this->cantidad;
                 $this->items[$index]['subtotal'] = $this->calcularSubtotal(
@@ -164,9 +172,14 @@ class VentaCreate extends Component
     public function confirmarSeleccion($articulo_id)
     {
         $articulo = Articulo::find($articulo_id);
-        $this->agregarArticuloLista($articulo);
-            
+        if ($this->stockSuperado($articulo)) {
+            return;
+        }
+        if ($this->verificarExisteEnLista($articulo)) {
+            return;
+        }
 
+        $this->agregarArticuloLista($articulo);
     }
 
     public function guardar()
