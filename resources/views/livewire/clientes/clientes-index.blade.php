@@ -33,7 +33,7 @@
                     <tr>
                         <td class="px-4 py-2">{{ $cliente->nombre }}</td>
                         <td class="px-4 py-2">{{ $cliente->telefono }}</td>
-                        <td class="px-4 py-2">{{ $cliente->cuit_cuil }}</td>
+                        <td class="px-4 py-2">{{ $cliente->cuit }}</td>
                         <td class="px-4 py-2">{{ $cliente->tipo_cliente }}</td>
                         <td class="px-4 py-2">{{ $cliente->percepcion_iva}}</td>
                         <td class="px-4 py-2 text-center">

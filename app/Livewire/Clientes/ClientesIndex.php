@@ -27,7 +27,7 @@ class ClientesIndex extends Component
             ->when($this->search, fn($query) =>
                 $query->where('nombre', 'like', '%' . $this->search . '%')
                     ->orWhere('telefono', 'like', '%' . $this->search . '%')
-                    ->orWhere('cuit_cuil', 'like', '%' . $this->search . '%')
+                    ->orWhere('cuit', 'like', '%' . $this->search . '%')
             )
             ->orderBy('id', 'desc')
             ->paginate(9);

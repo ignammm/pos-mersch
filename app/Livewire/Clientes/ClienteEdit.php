@@ -14,7 +14,7 @@ class ClienteEdit extends Component
     public $dni;
     public $tipo_cliente;
     public $percepcion_iva;
-    public $cuit_cuil;
+    public $cuit;
     public $telefono;
     public $direccion;
     public $email;
@@ -28,7 +28,7 @@ class ClienteEdit extends Component
         $this->dni = $cliente->dni;
         $this->tipo_cliente = $cliente->tipo_cliente;
         $this->percepcion_iva = $cliente->percepcion_iva;
-        $this->cuit_cuil = $cliente->cuit_cuil;
+        $this->cuit = $cliente->cuit;
         $this->telefono = $cliente->telefono;
         $this->direccion = $cliente->direccion;
         $this->email = $cliente->email;
@@ -41,7 +41,7 @@ class ClienteEdit extends Component
             'dni' => 'nullable|numeric|digits_between:7,10',
             'tipo_cliente' => 'required|in:Empresa,Taller,Particular',
             'percepcion_iva' => 'required|in:Responsable Inscripto,Exento,Monotributista,Consumidor Final',
-            'cuit_cuil' => 'nullable|numeric|digits:11',
+            'cuit' => 'nullable|numeric|digits:11',
             'telefono' => 'nullable|string|max:20',
             'direccion' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
@@ -57,7 +57,7 @@ class ClienteEdit extends Component
             'dni' => $this->dni,
             'tipo_cliente' => $this->tipo_cliente,
             'percepcion_iva' => $this->percepcion_iva,
-            'cuit_cuil' => $this->cuit_cuil,
+            'cuit' => $this->cuit,
             'telefono' => $this->telefono,
             'direccion' => $this->direccion,
             'email' => $this->email,

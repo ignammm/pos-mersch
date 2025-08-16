@@ -76,8 +76,8 @@
 
 
             <div class="mb-5">
-                <label for="cuit_cuil" class="block text-sm text-gray-700">Cuit</label>
-                <input wire:model="cuit_cuil" id="cuit_cuil" type="number" class="w-full mt-1 rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 shadow-sm">
+                <label for="cuit" class="block text-sm text-gray-700">Cuit</label>
+                <input wire:model="cuit" id="cuit" type="number" class="w-full mt-1 rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 shadow-sm">
             </div>
         
         </div>

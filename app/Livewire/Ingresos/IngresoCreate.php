@@ -12,7 +12,7 @@ use Livewire\Component;
 
 class IngresoCreate extends Component
 {
-    public $proveedor_id, $rubro, $tipo_comprobante, $numero_comprobante, $fecha, $total = 0, $codigo_proveedor, $codigo_fabricante;
+    public $proveedor_id = 1, $rubro, $tipo_comprobante, $numero_comprobante, $fecha, $total = 0, $codigo_proveedor, $codigo_fabricante;
     public $cantidad = 1;
     public $codigo_barra;
     public $items = [];
@@ -32,44 +32,60 @@ class IngresoCreate extends Component
             'codigo_barra' => 'required',
             'cantidad' => 'required|numeric|min:1',
         ]);
+        
+        $existe = Articulo::where('codigo_proveedor', $this->codigo_barra)
+        ->orWhere('codigo_fabricante', $this->codigo_barra)
+        ->exists();
+        
+        if ($existe) {
+            
+            // Si hay solo hay un articulo con ese codigo → agregar directo
+            $articulo = Articulo::where('codigo_proveedor', $this->codigo_barra)
+            ->orWhere('codigo_fabricante', $this->codigo_barra)
+            ->first();
+            
+            if (Articulo::where('id', $articulo->id)->exists()) {
+                // Verificar si ya está en la lista para sumar cantidades
+                if ($this->sumarCantidadSiExiste($articulo)) {
+                    return;
+                }
+                
+                $this->agregarArticuloListado($articulo);
+                return;
+            }
+        }
+        else {
+
+            $referenciaRsf = ReferenciaRsf::where('codigo_rsf', $this->codigo_barra)
+            ->orWhere('codigo_barra', $this->codigo_barra)
+            ->first();
+            
+            if ($referenciaRsf) {
+                
+                $this->crearArticulo($referenciaRsf);
+                return;
+            }
+        }
+        
 
         //Buscar si existen articulos que compartan el mismo codigo articulo (coincidentes)
         $this->coincidenciasArt = Articulo::where('articulo', $this->codigo_barra)
             ->get();
-
+    
         $this->coincidenciasRef = ReferenciaRsf::where('articulo', $this->codigo_barra)
             ->get();
-
-        // Unimos coincidencias
-        // $coincidencias = collect($coincidenciasArt) // fuerza a colección normal
-        // ->merge($coincidenciasRef)
-        // ->unique('marca')
-        // ->values();
         
         // Si hay coincidencia → mostrar modal
-        if ($this->coincidenciasArt->count() > 1 or $this->coincidenciasRef->count() > 1) {
-            $this->existen_duplicados = true;
-            $this->mostrarModalDuplicados = true;
-            return;
-        }
+        
+        $this->existen_duplicados = true;
+        $this->mostrarModalDuplicados = true;
+        return;
+        
+    }
 
-        // Si hay solo hay un articulo con ese codigo → agregar directo
-        $articulo = Articulo::where('codigo_proveedor', $this->codigo_barra)
-        ->orWhere('codigo_proveedor', $this->codigo_barra)
-        ->orWhere('articulo', $this->codigo_barra)
-        ->first();
+    private function verificarArticulosCoincidentes()
+    {
 
-        // Verificar si ya está en la lista para sumar cantidades
-        if ($this->sumarCantidadSiExiste($articulo)) {
-            return;
-        }
-
-        $referenciaRsf = ReferenciaRsf::where('codigo_rsf', $this->codigo_barra)
-        ->orWhere('codigo_barra', $this->codigo_barra)
-        ->orWhere('articulo', $this->codigo_barra)
-        ->first();
-
-        $this->crearArticulo($referenciaRsf);
     }
 
     private function sumarCantidadSiExiste($articulo)

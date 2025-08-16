@@ -29,37 +29,58 @@ class VentaCreate extends Component
             'descuento' => 'numeric|min:0',
         ]);
 
-        $articulo = Articulo::where('codigo_proveedor', $this->codigo_barra)
-            ->orWhere('codigo_fabricante', $this->codigo_barra)
-            ->orWhere('articulo', $this->codigo_barra)
-            ->get();
+        $existe = Articulo::where('codigo_proveedor', $this->codigo_barra)
+        ->orWhere('codigo_fabricante', $this->codigo_barra)
+        ->orWhere('articulo', $this->codigo_barra)
+        ->exists();
+        
+        if ($existe) {
             
-        if (!$articulo) {
+            if (Articulo::where('codigo_proveedor', $this->codigo_barra)
+                ->orWhere('codigo_fabricante', $this->codigo_barra)
+                ->orWhere('articulo', $this->codigo_barra)
+                ->count() <= 1)
+            {
+            
+                $articulo = Articulo::where('codigo_proveedor', $this->codigo_barra)
+                    ->orWhere('codigo_fabricante', $this->codigo_barra)
+                    ->orWhere('articulo', $this->codigo_barra)
+                    ->first();
+                
+                if ($this->stockSuperado($articulo)) {
+                    return;
+                }
+                
+                if ($this->verificarExisteEnLista($articulo->first())) {
+                    return;
+                }
+                
+                $this->agregarArticuloLista($articulo);
+                
+                $this->calcularTotal();
+                $this->reset(['codigo_barra', 'cantidad', 'descuento']);
+                
+                
+            }
+            else
+            {
+                
+                $this->articulosModal = Articulo::where('articulo', $this->codigo_barra)->get();
+                $this->modalSeleccionarArticulo = true;
+                return;
+                
+            }
+             
+        }
+        else {
+            
             $this->addError('codigo_barra', 'El código ingresado no existe.');
             $this->reset(['codigo_barra']);
             return;
         }
-
-        if ($articulo->where('articulo', $this->codigo_barra)->count() > 1)
-        {
-            $this->articulosModal = $articulo->where('articulo', $this->codigo_barra);
-            $this->modalSeleccionarArticulo = true;
-            return;
-        }
-
-        if ($this->stockSuperado($articulo->first())) {
-            return;
-        }
-
-        if ($this->verificarExisteEnLista($articulo->first())) {
-            return;
-        }
-
-        $this->agregarArticuloLista($articulo);
-
-        $this->calcularTotal();
-        $this->reset(['codigo_barra', 'cantidad', 'descuento']);
-        $this->modalSeleccionarArticulo = false;
+        
+       
+        
     }
 
     public function stockDisponible($articulo)

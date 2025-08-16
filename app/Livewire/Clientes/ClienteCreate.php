@@ -39,7 +39,7 @@ class ClienteCreate extends Component
             'dni' => $this->dni,
             'tipo_cliente' => $this->tipo_cliente,
             'percepcion_iva' => $this->percepcion_iva,
-            'cuit_cuil' => $this->cuit,
+            'cuit' => $this->cuit,
             'telefono' => $this->telefono,
             'direccion' => $this->direccion,
             'email' => $this->email,

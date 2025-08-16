@@ -67,7 +67,7 @@
             <label class="block text-sm">Codigo</label>
             <input wire:model="codigo_barra"  wire:keydown.enter="agregarArticulo"  type="text" class="w-full border rounded px-2 py-1
             @if(!$proveedor_id) bg-gray-100 text-gray-500 cursor-not-allowed @endif"
-            @disabled(!$proveedor_id) required>
+            @disabled(!$proveedor_id) required autofocus>
         </div>
 
         <div>

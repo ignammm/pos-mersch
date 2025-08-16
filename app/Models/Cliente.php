@@ -16,7 +16,7 @@ class Cliente extends Model
         'direccion',
         'email',
         'percepcion_iva',
-        'cuit_cuil',
+        'cuit',
         'tipo_cliente',
     ];
 
@@ -24,5 +24,10 @@ class Cliente extends Model
     public function facturas()
     {
         return $this->hasMany(Cliente::class);
+    }
+
+    public function vehiculo_cliente()
+    {
+        return $this->hasMany(VehiculoCliente::class);
     }
 }
