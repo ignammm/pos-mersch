@@ -12,6 +12,8 @@ class ArticuloIndex extends Component
 
     public $search = '';
 
+    protected $paginationTheme = 'tailwind';
+
     public function updatingSearch()
     {
         $this->resetPage(); // resetea la paginación al buscar

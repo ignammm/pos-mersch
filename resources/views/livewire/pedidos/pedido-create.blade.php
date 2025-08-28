@@ -16,7 +16,6 @@
             <tbody class="divide-y divide-gray-100">
                 @forelse ($detalles_venta as $item)
                     <tr>
-                        
                         <td class="px-4 py-2">{{ $item->cantidad }}</td>
                         <td class="px-4 py-2">{{ $item->articulo->articulo }}</td>
                         <td class="px-4 py-2">{{ $item->articulo->marca }}</td>

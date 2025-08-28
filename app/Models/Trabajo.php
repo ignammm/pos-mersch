@@ -17,8 +17,13 @@ class Trabajo extends Model
     ];
 
 
-    public function vehiculo_cliente()
+    public function vehiculoCliente()
     {
         return $this->belongsTo(VehiculoCliente::class);
+    }
+
+    public function detalles()
+    {
+        return $this->hasMany(DetalleTrabajo::class);
     }
 }

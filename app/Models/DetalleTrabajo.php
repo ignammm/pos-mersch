@@ -12,6 +12,7 @@ class DetalleTrabajo extends Model
     protected $fillable = [
         'trabajo_id',
         'articulo_id',
+        'cantidad',
         'observaciones',
     ];
 

@@ -11,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('clientes', function (Blueprint $table) {
-            $table->rename('cuit_cuiil', 'cuit');
+        Schema::table('trabajos', function (Blueprint $table) {
+            $table->enum('estado', ['pendiente', 'finalizado', 'pagado'])->default('pendiente')
+            ->after('descripcion');
         });
     }
 
@@ -21,8 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('clientes', function (Blueprint $table) {
-            $table->rename('cuit', 'cuit_cuil');
+        Schema::table('trabajos', function (Blueprint $table) {
+            //
         });
     }
 };

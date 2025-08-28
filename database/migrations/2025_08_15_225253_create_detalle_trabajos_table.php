@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('trabajo_id')->nullable()->constrained('trabajos')->onDelete('cascade');
             $table->unsignedBigInteger('articulo_id')->nullable();
-            $table->string('observaciones');
+            $table->unsignedBigInteger('cantidad')->nullable();
+            $table->string('observaciones')->nullable();
             $table->timestamps();
         });
     }

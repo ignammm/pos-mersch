@@ -35,13 +35,15 @@ class Factura extends Model
 
     public static function numeroComprobante($tipo_comprobante)
     {
-        // Obtenemos la última factura del tipo deseado
         $ultimaFactura = Factura::where('tipo_comprobante', $tipo_comprobante)
             ->orderByDesc('numero')
             ->first();
 
-        $siguienteNro = $ultimaFactura ? $ultimaFactura->numero + 1 : 1;
+        if ($ultimaFactura && is_numeric($ultimaFactura->numero)) {
+            return (int) $ultimaFactura->numero + 1;
+        }
 
-        return $siguienteNro;
+        dd('hola');
+        return 1;
     }
 }
