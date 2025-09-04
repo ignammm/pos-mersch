@@ -7,6 +7,7 @@ use App\Models\Cliente;
 use App\Models\DetalleTrabajo;
 use App\Models\DetalleVenta;
 use App\Models\Factura;
+use App\Models\MovimientoInventario;
 use App\Models\Stock;
 use App\Models\Trabajo;
 use App\Models\Vehiculo;
@@ -40,7 +41,7 @@ class TrabajoCreate extends Component
             $this->descripcion_trabajo = $trabajo->descripcion;
 
             // si ya tiene artículos cargados en detalle
-            $this->items = $trabajo->detalles->map(function($detalle) {
+            $this->items = $trabajo->detallesActivos->map(function($detalle) {
                 return [
                     'articulo_id' => $detalle->articulo_id,
                     'nombre' => $detalle->articulo->articulo,
@@ -159,7 +160,7 @@ class TrabajoCreate extends Component
         : 0;
 
         if ((Articulo::find($articulo->id)->stock->cantidad - $cantidadGuardada) < $this->cantidad) {
-            $this->addError('cantidad', 'La cantidad que intenta vender supera el stock. El stock disponible es de: '. $this->stockDisponible($articulo) . '.');
+            $this->addError('cantidad', 'La cantidad que intenta vender supera el stock. El stock disponible es de: '. $this->stockDisponible($articulo));
             $this->reset(['cantidad']);
             $this->modalSeleccionarArticulo = false;
             return true;
@@ -296,12 +297,49 @@ class TrabajoCreate extends Component
     {
         $originales = collect($this->items_originales)->keyBy('articulo_id');
         $nuevos = collect($this->items)->keyBy('articulo_id');
+        $trabajo = Trabajo::find($this->trabajo_id);
+
 
         // 1) Artículos eliminados -> devolver stock
         $eliminados = $originales->diffKeys($nuevos);
         foreach ($eliminados as $item) {
+            // Incrementar el stock
             Stock::where('articulo_id', $item['articulo_id'])
                 ->increment('cantidad', $item['cantidad']);
+
+            $detalleTrabajo = DetalleTrabajo::where('trabajo_id', $this->trabajo_id)
+            ->where('articulo_id', $item['articulo_id'])
+            ->where('activo', true)
+            ->first();
+
+            $detalleTrabajo->update([
+                'activo' => false,
+            ]);
+            
+            // Buscar el movimiento original de salida
+            $movimientoSalida = MovimientoInventario::where('movimiento_origen_id', $detalleTrabajo->id)
+                ->where('articulo_id', $item['articulo_id'])
+                ->where('tipo', 'salida') 
+                ->where('estado_reposicion', 'pendiente') 
+                ->where('cantidad', $item['cantidad'])
+                ->first();
+
+            if ($movimientoSalida) {
+                // Actualizar el movimiento de salida original
+                $movimientoSalida->update([
+                    'estado_reposicion' => 'reintegrado',
+                    'observaciones' => 'Articulo devuelto desde un trabajo.'
+                ]);
+
+            }
+            // Crear movimiento de entrada (devolución)
+            $detalleTrabajo->movimientos()->create([
+                'articulo_id' => $item['articulo_id'],
+                'cantidad' => $item['cantidad'],
+                'tipo' => 'entrada',
+                'motivo' => 'trabajo',
+                'observaciones' => 'Devolucion desde un trabajo.'
+            ]);
         }
 
         // 2) Artículos nuevos -> descontar stock
@@ -309,6 +347,23 @@ class TrabajoCreate extends Component
         foreach ($agregados as $item) {
             Stock::where('articulo_id', $item['articulo_id'])
                 ->decrement('cantidad', $item['cantidad']);
+
+           
+            $detalle = $trabajo->detalles()->create([
+                'articulo_id' => $item['articulo_id'],
+                'cantidad' => $item['cantidad'],
+                'observaciones' => 'Articulo agregado al modificar el trabajo.',
+            ]);
+
+            $detalle->movimientos()->create([
+                'articulo_id' => $item['articulo_id'],
+                'cantidad' => $item['cantidad'],
+                'tipo' => 'salida',
+                'motivo' => 'trabajo',
+                'estado_reposicion' => 'pendiente',
+                'observaciones' => 'Este articulo se agrego desde una modificacion a un trabajo.',
+            ]);
+            
         }
 
         // 3) Artículos que se mantienen -> ver si cambió la cantidad
@@ -319,12 +374,80 @@ class TrabajoCreate extends Component
             if ($itemNuevo['cantidad'] != $itemViejo['cantidad']) {
                 $diferencia = $itemNuevo['cantidad'] - $itemViejo['cantidad'];
 
+                $detalle = DetalleTrabajo::where('trabajo_id', $this->trabajo_id)
+                    ->where('articulo_id', $id)
+                    ->first();
+
                 if ($diferencia > 0) {
                     // pidió más -> restar al stock
                     Stock::where('articulo_id', $id)->decrement('cantidad', $diferencia);
+
+                    $detalle->update([
+                        'cantidad' => $itemNuevo['cantidad'],
+                        'observaciones' => 'Se agregraron mas unidades de este articulo al trabajo.'
+                    ]);
+
+                    $detalle->movimientos()->create([
+                        'articulo_id' => $id,
+                        'cantidad' => $diferencia,
+                        'tipo' => 'salida',
+                        'motivo' => 'trabajo',
+                        'estado_reposicion' => 'pendiente',
+                        'observaciones' => 'Este articulo incremento la cantidad del detalle de un trabajo con una modificacion.',
+                    ]);
+
                 } else {
                     // quitó algunos -> devolver al stock
                     Stock::where('articulo_id', $id)->increment('cantidad', abs($diferencia));
+
+                    $detalleTrabajo = DetalleTrabajo::where('trabajo_id', $this->trabajo_id)
+                    ->where('articulo_id', $id)
+                    ->first();
+
+                    $detalleTrabajo->update([
+                        'cantidad' => $itemNuevo['cantidad'],
+                        'observaciones' => 'Se restaron unidades de este articulo al trabajo.'
+                    ]);
+
+                     // 3) Buscar movimientos de salida pendientes
+                    $movimientosSalida = MovimientoInventario::where('movimiento_origen_id', $detalleTrabajo->id)
+                        ->where('articulo_id', $itemViejo['articulo_id'])
+                        ->where('tipo', 'salida')
+                        ->where('estado_reposicion', 'pendiente')
+                        ->orderBy('id')
+                        ->get();
+
+                    $cantidadRestante = abs($diferencia);
+
+                    foreach ($movimientosSalida as $movimiento) {
+                        if ($cantidadRestante <= 0) break;
+
+                        if ($movimiento->cantidad <= $cantidadRestante) {
+                            // Este movimiento se "consume" completo
+                            $cantidadRestante -= $movimiento->cantidad;
+
+                            $movimiento->update([
+                                'estado_reposicion' => 'reintegrado',
+                                'observaciones' => 'Movimiento ajustado por devolución en modificación de trabajo.'
+                            ]);
+
+                        } else {
+                            // Solo se descuenta una parte
+                            $movimiento->update([
+                                'cantidad' => $movimiento->cantidad - $cantidadRestante,
+                                'observaciones' => 'Cantidad ajustada por devolución en modificación de trabajo.'
+                            ]);
+                            $cantidadRestante = 0;
+                        }
+                    }
+                    
+                    $detalle->movimientos()->create([
+                        'articulo_id' => $id,
+                        'cantidad' => abs($diferencia),
+                        'tipo' => 'entrada',
+                        'motivo' => 'trabajo',
+                        'observaciones' => 'Devolucion desde una modificacion a un trabajo.',
+                    ]);
                 }
             }
         }
@@ -335,7 +458,6 @@ class TrabajoCreate extends Component
         $user = Auth::user();
 
         $this->validate([
-            'items' => 'required|array|min:1',
             'nombre_trabajo' => 'required',
         ]);
 
@@ -350,20 +472,20 @@ class TrabajoCreate extends Component
                 'descripcion' => $this->descripcion_trabajo,
             ]);
 
+            $this->compararItems();
+
             // Actualizar detalles (puedes borrar y volver a insertar, o comparar)
-            $trabajo->detalles()->delete();
+            // $trabajo->detalles()->delete();
 
             
-            foreach ($this->items as $item) {
-                DetalleTrabajo::create([
-                    'trabajo_id' => $this->trabajo_id,
-                    'articulo_id' => $item['articulo_id'],
-                    'cantidad' => $item['cantidad'],
-                ]);
-                
-            }
-
-            $this->compararItems();
+            // foreach ($this->items as $item) {
+            //     DetalleTrabajo::create([
+            //         'trabajo_id' => $this->trabajo_id,
+            //         'articulo_id' => $item['articulo_id'],
+            //         'cantidad' => $item['cantidad'],
+            //     ]);
+ 
+            // }
 
             DB::commit();
 
@@ -381,10 +503,18 @@ class TrabajoCreate extends Component
             ]);
 
             foreach ($this->items as $item) {
-                DetalleTrabajo::create([
+                $detalle = DetalleTrabajo::create([
                     'trabajo_id' => $trabajo->id,
                     'articulo_id' => $item['articulo_id'],
                     'cantidad' => $item['cantidad'],
+                ]);
+
+                $detalle->movimientos()->create([
+                    'articulo_id' => $item['articulo_id'],
+                    'cantidad' => $item['cantidad'],
+                    'tipo' => 'salida',
+                    'motivo' => 'trabajo',
+                    'estado_reposicion' => 'pendiente',
                 ]);
 
                 $stock = Stock::where('articulo_id', $item['articulo_id'])->first();

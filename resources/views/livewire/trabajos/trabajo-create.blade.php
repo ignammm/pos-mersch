@@ -137,30 +137,33 @@
                     <th class="px-4 py-2 text-left text-sm text-gray-700">Marca</th>
                     <th class="px-4 py-2 text-right text-sm text-gray-700">Precio Unitario</th>
                     <th class="px-4 py-2 text-center text-sm text-gray-700">Subtotal</th>
-                     <th class="px-4 py-2 text-center text-sm text-gray-700">Acciones</th>
+                    <th class="px-4 py-2 text-center text-sm text-gray-700">Acciones</th>
                     
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
                 @forelse ($items as $index => $item)
+
                     <tr>
-                        
                         <td class="px-4 py-2">{{ $item['nombre'] }}</td>
                         <td class="px-4 py-2">{{ $item['rubro'] }}</td>
                         <td class="px-4 py-2">{{ $item['cantidad'] }}</td>
-                         <td class="px-4 py-2">{{ $item['marca'] }}</td>
+                        <td class="px-4 py-2">{{ $item['marca'] }}</td>
                         <td class="px-4 py-2 text-right">${{ number_format($item['precio_unitario']), 0}}</td>
                         <td class="px-4 py-2 text-right">${{ number_format($item['subtotal'], 0) }}</td>
                         <td class="px-4 py-2 text-center">
                             <button wire:click="eliminarItem({{ $index }})" class="text-red-600">Eliminar</button>
                         </td>
                     </tr>
+
                 @empty
+
                     <tr>
                         <td colspan="7" class="px-4 py-4 text-center text-gray-500">
                             No se agregaron articulos al trabajo aún.
                         </td>
                     </tr>
+
                 @endforelse
             </tbody>
         </table>

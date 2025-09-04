@@ -31,5 +31,9 @@ class DetalleVenta extends Model
         return $this->belongsTo(Articulo::class);
     }
 
+    public function movimientos()
+    {
+        return $this->morphMany(MovimientoInventario::class, 'movimiento_origen');
+    }
 
 }

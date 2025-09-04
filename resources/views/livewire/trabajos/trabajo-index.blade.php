@@ -2,6 +2,28 @@
 
     <p class="text-4xl font-bold text-gray-900 pb-3">Trabajos</p>
 
+    @if(session('message'))
+        <div x-data="{ show: true }" 
+             x-show="show" 
+             x-transition
+             x-init="setTimeout(() => show = false, 5000)"
+             class="fixed top-5 right-5 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 max-w-md">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>{{ session('message') }}</span>
+                </div>
+                <button @click="show = false" class="ml-4 text-white hover:text-gray-200">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    @endif
+
     <div class="flex justify-between mb-4">
         <input
             type="text"

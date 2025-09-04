@@ -26,4 +26,9 @@ class Trabajo extends Model
     {
         return $this->hasMany(DetalleTrabajo::class);
     }
+
+    public function detallesActivos()
+    {
+        return $this->hasMany(DetalleTrabajo::class)->where('activo', true);
+    }
 }
