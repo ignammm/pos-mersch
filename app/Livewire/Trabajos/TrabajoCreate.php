@@ -20,7 +20,7 @@ use Livewire\Component;
 class TrabajoCreate extends Component
 {
     public $cliente_id,  $vehiculos_cliente = [], $patente, $codigo_barra, $cantidad = 1, $items = [], $items_originales = [], $total,
-    $marca, $marcas = [], $clientes, $modelos = [], $modelo, $anio, $descripcion, $patente_modal, $mostrarModalVehiculo = false;
+    $marca, $marcas = [], $clientes, $modelos = [], $modelo, $anio, $descripcion, $patente_modal, $mostrarModalVehiculo = false, $stockArticulos = [];
     public $articulosModal = [], $modalSeleccionarArticulo = false;
     public $nombre_trabajo, $descripcion_trabajo;
     public $trabajo_id;
@@ -56,6 +56,7 @@ class TrabajoCreate extends Component
             })->toArray();
             $this->items_originales = $this->items;
             $this->calcularTotal();
+            $this->cargarStockArticulos();
         }
     }
 
@@ -79,6 +80,17 @@ class TrabajoCreate extends Component
     { 
         $this->modelos = VehiculoReferencia::where('marca', $this->marca)
             ->get();
+    }
+
+    public function cargarStockArticulos()
+    {
+        $ids = collect($this->items)->pluck('articulo_id')->toArray();
+
+        $stocks = Stock::whereIn('articulo_id', $ids)->pluck('cantidad', 'articulo_id');
+
+        foreach ($this->items as $item) {
+            $this->stockArticulos[$item['articulo_id']] = $stocks[$item['articulo_id']] ?? 0;
+        }
     }
 
     public function agregarArticulo()
@@ -140,6 +152,37 @@ class TrabajoCreate extends Component
        
     }
 
+    public function incrementarCantidad($index)
+    {
+        if ($this->stockArticulos[$this->items[$index]['articulo_id']] <= 0) {
+            $this->addError('cantidad', 'La cantidad que intenta vender supera el stock. El stock disponible es de: '. $this->stockArticulos[$this->items[$index]['articulo_id']]);
+            return;
+        }
+
+        if (isset($this->items[$index])) {
+            $this->items[$index]['cantidad']++;
+            $this->items[$index]['subtotal'] = $this->items[$index]['cantidad'] * $this->items[$index]['precio_unitario'];
+            $this->stockArticulos[$this->items[$index]['articulo_id']]--;
+            $this->calcularTotal(); // si ya tenés un método de total
+        }
+
+
+    }
+
+    public function decrementarCantidad($index)
+    {
+        if (isset($this->items[$index]) && $this->items[$index]['cantidad'] > 1) {
+            $this->items[$index]['cantidad']--;
+            $this->items[$index]['subtotal'] = $this->items[$index]['cantidad'] * $this->items[$index]['precio_unitario'];
+            $this->stockArticulos[$this->items[$index]['articulo_id']]++;
+            $this->calcularTotal();
+            return;
+        }
+        $this->addError('cantidad', 'No es posible tener una cantidad menor a 1.');
+
+
+    }
+
     public function confirmarSeleccion($articulo_id)
     {
         $articulo = Articulo::find($articulo_id);
@@ -155,21 +198,32 @@ class TrabajoCreate extends Component
 
     public function stockSuperado($articulo)
     {
-        $cantidadGuardada = $this->trabajo_id === null
-        ? (collect($this->items)->firstWhere('articulo_id', $articulo->id)['cantidad'] ?? 0)
-        : 0;
+        if (isset($this->stockArticulos[$articulo->id])) {
 
-        if ((Articulo::find($articulo->id)->stock->cantidad - $cantidadGuardada) < $this->cantidad) {
+            if ($this->stockArticulos[$articulo->id] < $this->cantidad) {
             $this->addError('cantidad', 'La cantidad que intenta vender supera el stock. El stock disponible es de: '. $this->stockDisponible($articulo));
             $this->reset(['cantidad']);
             $this->modalSeleccionarArticulo = false;
             return true;
+            }
+            return false;
+
+        }
+        if (Articulo::find($articulo->id)->stock->cantidad < $this->cantidad) {
+            $this->addError('cantidad', 'La cantidad que intenta vender supera el stock. El stock disponible es de: '. $this->stockDisponible($articulo));
+            $this->reset(['cantidad']);
+            $this->modalSeleccionarArticulo = false;
+            return true;
+            
         }
         return false;
     }
 
     public function stockDisponible($articulo)
     {
+        if (isset($this->items[$articulo->id])) {
+           return $this->stockArticulos[$articulo->id];
+        }
         $articulo = Articulo::find($articulo->id);
         return $articulo->stock->cantidad;
     }
@@ -201,6 +255,7 @@ class TrabajoCreate extends Component
             $this->items[$index]['cantidad']
         );
 
+        $this->stockArticulos[$this->items[$index]['articulo_id']] -= $this->cantidad;
         $this->calcularTotal();
         $this->reset(['codigo_barra']);
 
@@ -221,11 +276,21 @@ class TrabajoCreate extends Component
     public function eliminarItem($index)
     {
         if (isset($this->items[$index])) {
+            $articuloId = $this->items[$index]['articulo_id'];
+
+            // devolver al stock del artículo correcto
+            if (isset($this->stockArticulos[$articuloId])) {
+                $this->stockArticulos[$articuloId] += $this->items[$index]['cantidad'];
+            }
+
             unset($this->items[$index]);
-            $this->items = array_values($this->items);
+            $this->items = array_values($this->items); // reindexar
             $this->calcularTotal();
         }
+
+       
     }
+
 
     public function confirmarVehiculoCliente()
     {
@@ -276,6 +341,8 @@ class TrabajoCreate extends Component
                 'precio_unitario' => $articulo->precio,
                 'subtotal' => $this->calcularSubtotal($articulo->precio, $this->cantidad),
             ];
+
+            $this->stockArticulos[$articulo->id] = Articulo::find($articulo->id)->stock->cantidad - $this->cantidad;
         }
 
         $this->calcularTotal();

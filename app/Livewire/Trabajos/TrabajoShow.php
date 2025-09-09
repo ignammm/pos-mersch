@@ -19,11 +19,24 @@ class TrabajoShow extends Component
 
     public function eliminarTrabajo()
     {
-        $this->trabajo->detalles()->delete();
+        $this->trabajo->detalles()->update(['activo' => false]);
 
-        Trabajo::findOrFail($this->trabajo->id)->delete();
+        $this->trabajo->update([
+            'estado' => 'cancelado',
+        ]);
 
         session()->flash('message', 'Trabajo eliminado correctamente');
+        
+        return redirect()->route('trabajos.index');
+    }
+
+    public function finalizarTrabajo()
+    {
+        $this->trabajo->update([
+            'estado' => 'finalizado',
+        ]);
+
+        session()->flash('message', 'Su trabajo se acaba de finalizar correctamente');
         
         return redirect()->route('trabajos.index');
     }

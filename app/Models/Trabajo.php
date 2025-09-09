@@ -14,6 +14,7 @@ class Trabajo extends Model
         'fecha',
         'vehiculo_cliente_id',
         'descripcion',
+        'estado',
     ];
 
 

@@ -32,6 +32,7 @@ class TrabajoIndex extends Component
                             ->orWhere('modelo', 'like', "%{$this->search}%");
                       });
             })
+            ->where('estado', '!=', 'cancelado')
             ->latest()
             ->paginate(10);
 

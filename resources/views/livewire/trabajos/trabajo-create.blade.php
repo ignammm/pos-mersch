@@ -147,7 +147,23 @@
                     <tr>
                         <td class="px-4 py-2">{{ $item['nombre'] }}</td>
                         <td class="px-4 py-2">{{ $item['rubro'] }}</td>
-                        <td class="px-4 py-2">{{ $item['cantidad'] }}</td>
+                        <td class="px-4 py-2">
+                            <div class="flex items-center space-x-2">
+                                <button 
+                                    wire:click="decrementarCantidad({{ $index }})" 
+                                    class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300">
+                                    -
+                                </button>
+
+                                <span>{{ $item['cantidad'] }}</span>
+
+                                <button 
+                                    wire:click="incrementarCantidad({{ $index }})" 
+                                    class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300">
+                                    +
+                                </button>
+                            </div>
+                        </td>
                         <td class="px-4 py-2">{{ $item['marca'] }}</td>
                         <td class="px-4 py-2 text-right">${{ number_format($item['precio_unitario']), 0}}</td>
                         <td class="px-4 py-2 text-right">${{ number_format($item['subtotal'], 0) }}</td>
