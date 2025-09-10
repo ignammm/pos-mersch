@@ -9,6 +9,8 @@ use App\Livewire\Clientes\ClientesIndex;
 use App\Livewire\Ingresos\IngresoCreate;
 use App\Livewire\Pedidos\PedidoCreate;
 use App\Livewire\Pedidos\PedidosIndex;
+use App\Livewire\Presupuestos\PresupuestoCreate;
+use App\Livewire\Presupuestos\PresupuestoIndex;
 use App\Livewire\Trabajos\TrabajoCreate;
 use App\Livewire\Trabajos\TrabajoEdit;
 use App\Livewire\Trabajos\TrabajoIndex;
@@ -40,4 +42,7 @@ Route::middleware(['auth','verified'])->group(function () {
     Route::get('/trabajos/create', TrabajoCreate::class)->name('trabajos.create');
     Route::get('/trabajos/{id}/show', TrabajoShow::class)->name('trabajos.show');
     Route::get('/trabajos/{id}/edit', TrabajoCreate::class)->name('trabajos.edit');
+
+    Route::get('/presupuestos', PresupuestoIndex::class)->name('presupuestos.index');
+    Route::get('/presupuestos/create', PresupuestoCreate::class)->name('presupuestos.create');
 });

@@ -14,6 +14,7 @@ class Factura extends Model
         'user_id',
         'fecha',
         'tipo_comprobante',
+        'trabajo_id',
         'numero',
         'monto_original',
         'monto_final',
@@ -43,7 +44,6 @@ class Factura extends Model
             return (int) $ultimaFactura->numero + 1;
         }
 
-        dd('hola');
         return 1;
     }
 }

@@ -46,6 +46,7 @@
                     <th class="px-4 py-2 text-left text-sm text-white">Fecha</th>
                     <th class="px-4 py-2 text-left text-sm text-white">Cliente</th>
                     <th class="px-4 py-2 text-left text-sm text-white">Vehículo</th>
+                    <th class="px-4 py-2 text-left text-sm text-white">Estado</th>
                     <th class="px-4 py-2 text-center text-sm text-white">Acciones</th>
                 </tr>
             </thead>
@@ -58,6 +59,25 @@
                         <td class="px-4 py-2">
                             {{ $trabajo->vehiculoCliente->vehiculo->marca ?? '' }}
                             {{ $trabajo->vehiculoCliente->vehiculo->modelo ?? '' }}
+                        </td>
+                        <td class="px-4 py-2">
+                            @if ($trabajo->estado === 'pendiente')
+                                <span class="px-2 py-1 text-xs font-semibold text-yellow-800 bg-yellow-200 rounded-full">
+                                    Pendiente
+                                </span>
+                            @elseif ($trabajo->estado === 'finalizado')
+                                <span class="px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">
+                                    Finalizado
+                                </span>
+                            @elseif ($trabajo->estado === 'pagado')
+                                <span class="px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-200 rounded-full">
+                                    Pagado
+                                </span>
+                            @else
+                                <span class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-200 rounded-full">
+                                    {{ ucfirst($trabajo->estado) }}
+                                </span>
+                            @endif
                         </td>
                         <td class="px-4 py-2 text-center">
                             <a href="{{ route('trabajos.show', $trabajo) }}"
