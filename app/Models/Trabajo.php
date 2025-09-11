@@ -32,4 +32,9 @@ class Trabajo extends Model
     {
         return $this->hasMany(DetalleTrabajo::class)->where('activo', true);
     }
+
+    public function presupuesto()
+    {
+        return $this->morphOne(Presupuesto::class, 'conversion', 'tipo_conversion', 'conversion_id');
+    }
 }

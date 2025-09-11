@@ -46,4 +46,9 @@ class Factura extends Model
 
         return 1;
     }
+
+    public function presupuesto()
+    {
+        return $this->morphOne(Presupuesto::class, 'conversion', 'tipo_conversion', 'conversion_id');
+    }
 }

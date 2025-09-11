@@ -155,7 +155,7 @@ class TrabajoCreate extends Component
     public function incrementarCantidad($index)
     {
         if ($this->stockArticulos[$this->items[$index]['articulo_id']] <= 0) {
-            $this->addError('cantidad', 'La cantidad que intenta vender supera el stock. El stock disponible es de: '. $this->stockArticulos[$this->items[$index]['articulo_id']]);
+            $this->addError('cantidad', 'La cantidad que intenta vender supera el stock. El stock disponible es de: '. Articulo::find($this->items[$index]['articulo_id'])->stock->cantidad);
             return;
         }
 

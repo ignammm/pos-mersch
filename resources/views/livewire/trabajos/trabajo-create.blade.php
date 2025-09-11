@@ -79,7 +79,7 @@
 
     {{-- AGREGAR TRABAJO --}}
     <h3 class="text-lg font-semibold mb-2">Datos del Trabajo</h3>
-       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div>
             <label class="block text-sm">Nombre</label>
             <input wire:model="nombre_trabajo" type="text" class="w-full border rounded px-2 py-1
