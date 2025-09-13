@@ -11,6 +11,7 @@ use App\Livewire\Pedidos\PedidoCreate;
 use App\Livewire\Pedidos\PedidosIndex;
 use App\Livewire\Presupuestos\PresupuestoCreate;
 use App\Livewire\Presupuestos\PresupuestoIndex;
+use App\Livewire\Presupuestos\PresupuestoShow;
 use App\Livewire\Trabajos\TrabajoCreate;
 use App\Livewire\Trabajos\TrabajoEdit;
 use App\Livewire\Trabajos\TrabajoIndex;
@@ -45,4 +46,7 @@ Route::middleware(['auth','verified'])->group(function () {
 
     Route::get('/presupuestos', PresupuestoIndex::class)->name('presupuestos.index');
     Route::get('/presupuestos/create', PresupuestoCreate::class)->name('presupuestos.create');
+    Route::get('/presupuestos/{id}/show', PresupuestoShow::class)->name('presupuestos.show');
+    Route::get('/presupuestos/{id}/edit', PresupuestoCreate::class)->name('presupuestos.edit');
+
 });

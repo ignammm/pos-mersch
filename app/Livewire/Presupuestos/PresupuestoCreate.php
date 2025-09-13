@@ -6,6 +6,7 @@ use App\Models\Articulo;
 use App\Models\Cliente;
 use App\Models\DetallePresupuesto;
 use App\Models\Presupuesto;
+use App\Models\Stock;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -15,6 +16,46 @@ class PresupuestoCreate extends Component
 
     public $descripcion_presupuesto, $codigo_barra, $cantidad = 1, $total, $items = [], $articulosModal = [], $modalSeleccionarArticulo = false
     , $stockArticulos, $fecha_validez = 7, $presupuesto_id;
+
+
+    public function mount($id = null)
+    {
+
+        if ($id != null) {
+
+            $presupuesto = Presupuesto::with('detalles.articulo')->findOrFail($id);
+
+            $this->presupuesto_id = $id;
+            $this->descripcion_presupuesto = $presupuesto->observaciones;
+
+            $this->items = $presupuesto->detalles->map(function($detalle) {
+                return [
+                    'articulo_id' => $detalle->articulo_id,
+                    'nombre' => $detalle->articulo->articulo,
+                    'rubro' => $detalle->articulo->rubro,
+                    'marca' => $detalle->articulo->marca,
+                    'codigo_proveedor' => $detalle->articulo->codigo_proveedor,
+                    'codigo_fabricante' => $detalle->articulo->codigo_fabricante,
+                    'cantidad' => (int) $detalle->cantidad,
+                    'precio_unitario' => $detalle->precio_unitario,
+                    'subtotal' => $this->calcularSubtotal($detalle->precio_unitario, $detalle->cantidad),
+                ];
+            })->toArray();
+            $this->calcularTotal();
+            $this->cargarStockArticulos();
+        }
+    }
+
+    public function cargarStockArticulos()
+    {
+        $ids = collect($this->items)->pluck('articulo_id')->toArray();
+
+        $stocks = Stock::whereIn('articulo_id', $ids)->pluck('cantidad', 'articulo_id');
+
+        foreach ($this->items as $item) {
+            $this->stockArticulos[$item['articulo_id']] = $stocks[$item['articulo_id']] ?? 0;
+        }
+    }
 
     public function agregarArticulo()
     {
@@ -257,9 +298,20 @@ class PresupuestoCreate extends Component
             $presupuesto = Presupuesto::find($this->presupuesto_id);
             $presupuesto->update([
                 'descripcion_presupuesto' => $this->descripcion_presupuesto,
+                'fecha_validez' => now()->addDays($this->fecha_validez),
             ]);
 
-            $this->compararItems();
+            $presupuesto->detalles()->delete();
+
+            foreach ($this->items as $item) {
+                DetallePresupuesto::create([
+                    'presupuesto_id' => $presupuesto->id,
+                    'articulo_id' => $item['articulo_id'],
+                    'cantidad' => $item['cantidad'],
+                    'precio_unitario' => $item['precio_unitario'],
+                    'subtotal' => $item['subtotal'],
+                ]);
+            }
 
             DB::commit();
 
