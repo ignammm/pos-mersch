@@ -2,15 +2,26 @@
 
 namespace App\Livewire\Presupuestos;
 
+use App\DTO\ConvertirPresupuestoDTO;
+use App\Http\Controllers\PresupuestoConversionController;
+use App\Models\Cliente;
 use Livewire\Component;
 use App\Models\Presupuesto;
 use App\Models\Factura;
 use App\Models\Trabajo;
+use App\Models\VehiculoCliente;
+use App\Services\PresupuestoConversionService;
 
 class PresupuestoShow extends Component
 {
     public Presupuesto $presupuesto;
-    public $detalles_presupuesto, $total;
+    public $detalles_presupuesto, $total, $mostrarConvertirPresupuesto = false,
+    $clientes, $cliente_id, $vehiculos_cliente = [], $vehiculo_cliente_id, $tipoConversion;
+    public $presupuesto_id;
+    public $tipo_conversion = '';
+    public $nombre_trabajo = '';
+    public $descripcion_trabajo = '';
+
 
     protected $listeners = ['presupuesto-update' => '$refresh'];
 
@@ -19,6 +30,24 @@ class PresupuestoShow extends Component
         $this->presupuesto = $id;
         $this->detalles_presupuesto = $this->presupuesto->detalles()->with('articulo')->get();
         $this->total = collect($this->detalles_presupuesto)->sum('subtotal');
+        $this->clientes = Cliente::all();
+    }
+    
+
+    public function updatedClienteId() 
+    { 
+        if(VehiculoCliente::where('cliente_id', $this->cliente_id)
+        ->exists())
+        {
+            $this->vehiculos_cliente = VehiculoCliente::where('cliente_id', $this->cliente_id)
+            ->get();
+        }
+        else
+        {
+            $this->vehiculos_cliente = [];
+            $this->addError('cliente', 'Este cliente no tiene ningun vehiculo a su nombre, asignele uno.');
+            return;
+        }
     }
 
     public function eliminarPresupuesto()
@@ -30,64 +59,48 @@ class PresupuestoShow extends Component
         return redirect()->route('presupuestos.index');
     }
 
-    public function presupuestoVenta()
+    public function abrirModalConvertidorPresupuesto()
     {
-        // 1) Crear la venta a partir del presupuesto
-        $venta = Factura::create([
-            'cliente_id'   => $this->presupuesto->cliente_id,
-            'fecha'        => now(),
-            'total'        => $this->presupuesto->total_estimado,
-            'observaciones'=> $this->presupuesto->observaciones,
-        ]);
-
-        foreach ($this->detalles_presupuesto as $dp) {
-            $venta->detalles()->create([
-                'articulo_id'    => $dp->articulo_id,
-                'descripcion'    => $dp->descripcion,
-                'cantidad'       => $dp->cantidad,
-                'precio_unitario'=> $dp->precio_unitario,
-                'subtotal'       => $dp->subtotal,
-            ]);
-        }
-
-        // 2) Marcar el presupuesto como convertido
-        $this->presupuesto->update([
-            'estado'         => 'convertido',
-            'tipo_conversion'=> Factura::class,
-            'conversion_id'  => $venta->id,
-        ]);
-
-        $this->dispatch('presupuesto-update');
+        $this->mostrarConvertirPresupuesto = true;
     }
 
-    public function presupuestoTrabajo()
+
+    public function presupuestoConfirmar()
     {
-        // 1) Crear el trabajo a partir del presupuesto
-        $trabajo = Trabajo::create([
-            'cliente_id'   => $this->presupuesto->cliente_id,
-            'fecha'        => now(),
-            'estado'       => 'pendiente',
-            'observaciones'=> $this->presupuesto->observaciones,
+        $this->validate([
+            'tipo_conversion' => 'required|in:venta,trabajo',
+            'cliente_id' => 'required',
+            'vehiculo_cliente_id' => 'required_if:tipo_conversion,trabajo',
+            'nombre_trabajo' => 'required_if:tipo_conversion,trabajo',
+            'descripcion_trabajo' => 'nullable',
         ]);
-
-        foreach ($this->detalles_presupuesto as $dp) {
-            $trabajo->detalles()->create([
-                'articulo_id'    => $dp->articulo_id,
-                'descripcion'    => $dp->descripcion,
-                'cantidad'       => $dp->cantidad,
-                'precio_unitario'=> $dp->precio_unitario,
-                'subtotal'       => $dp->subtotal,
-            ]);
+        
+        try {
+            // Obtener el presupuesto actual (ajusta según tu lógica)
+            $presupuesto = Presupuesto::find($this->presupuesto->id);
+            
+            // Crear DTO con los datos
+            $dto = new ConvertirPresupuestoDTO(
+                tipo: $this->tipo_conversion,
+                cliente_id: $this->cliente_id,
+                vehiculo_cliente_id: $this->vehiculos_cliente_id ?? null,
+                nombre_trabajo: $this->nombre_trabajo ?? null,
+                descricion_trabajo: $this->descripcion_trabajo ?? null,
+            );
+            
+            // Llamar al service
+            $conversionService = app(PresupuestoConversionService::class);
+            $resultado = $conversionService->convertir($presupuesto, $dto);
+            
+            // Redireccionar o mostrar mensaje
+            session()->flash('success', 'Presupuesto convertido exitosamente');
+            
+            // Si estás en Livewire, puedes emitir evento
+            // $this->emit('presupuestoConvertido', $resultado->id);
+            
+        } catch (\Exception $e) {
+            session()->flash('error', 'Error: ' . $e->getMessage());
         }
-
-        // 2) Marcar el presupuesto como convertido
-        $this->presupuesto->update([
-            'estado'         => 'convertido',
-            'tipo_conversion'=> Trabajo::class,
-            'conversion_id'  => $trabajo->id,
-        ]);
-
-        $this->dispatch('presupuesto-update');
     }
 
     public function presupuestoRechazar()

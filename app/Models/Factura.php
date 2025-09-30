@@ -15,6 +15,7 @@ class Factura extends Model
         'fecha',
         'tipo_comprobante',
         'trabajo_id',
+        'presupuesto_id',
         'numero',
         'monto_original',
         'monto_final',
