@@ -91,12 +91,11 @@ class PresupuestoShow extends Component
             // Llamar al service
             $conversionService = app(PresupuestoConversionService::class);
             $resultado = $conversionService->convertir($presupuesto, $dto);
-            
-            // Redireccionar o mostrar mensaje
-            session()->flash('success', 'Presupuesto convertido exitosamente');
-            
-            // Si estás en Livewire, puedes emitir evento
-            // $this->emit('presupuestoConvertido', $resultado->id);
+
+            $this->mostrarConvertirPresupuesto = false;
+
+            return redirect()->route('presupuestos.show', $this->presupuesto->id)
+                ->with('success', "Presupuesto convertido a " . $this->tipo_conversion . " exitosamente");
             
         } catch (\Exception $e) {
             session()->flash('error', 'Error: ' . $e->getMessage());

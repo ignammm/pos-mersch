@@ -30,7 +30,7 @@ class PresupuestoIndex extends Component
                 $query->whereBetween('fecha_emision', [$this->search_fecha_inicio, $this->search_fecha_fin]);
             })
             ->latest()
-            ->paginate(10);
+            ->paginate(8);
 
 
         return view('livewire.presupuestos.presupuesto-index', compact('presupuestos'));

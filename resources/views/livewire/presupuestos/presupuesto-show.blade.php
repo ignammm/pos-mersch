@@ -11,22 +11,21 @@
         </div>
     </div>
 
-    <div 
-        x-data="{ mostrar: false }" 
-        x-init="@this.on('presupuesto-update', () => { 
-            mostrar = true; 
-            setTimeout(() => mostrar = false, 2000); 
-        })"
+   <div 
+        x-data="{ mostrar: {{ session('success') ? 'true' : 'false' }} }"
+        x-init="if(mostrar){ setTimeout(() => mostrar = false, 2000) }"
         class="fixed bottom-5 right-5 z-50"
-    >
+        >
         <div 
             x-show="mostrar"
             x-transition
             class="bg-green-600 text-white px-4 py-2 rounded shadow-lg"
         >
-            ✅ Presupuesto actualizado correctamente
-        </div>
+            ✅ {{ session('success') }}
     </div>
+    
+</div>
+
 
 
     {{-- Tarjeta --}}
