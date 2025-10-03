@@ -6,6 +6,7 @@ use App\Models\Articulo;
 use App\Models\Cliente;
 use App\Models\DetallePresupuesto;
 use App\Models\Presupuesto;
+use App\Models\ReferenciaRsf;
 use App\Models\Stock;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -108,6 +109,22 @@ class PresupuestoCreate extends Component
         }
         else {
             
+            $referenciaRsf = ReferenciaRsf::where('codigo_rsf', $this->codigo_barra)
+            ->orWhere('codigo_barra', $this->codigo_barra)
+            ->orWhere('articulo', $this->codigo_barra)
+            ->first();
+            
+            if ($referenciaRsf) {
+                
+
+                if (ReferenciaRsf::where('articulo', $this->codigo_barra)
+                    ->count() > 1) {
+                    
+                }
+                
+                $this->crearArticulo($referenciaRsf);
+                return;
+            }
             $this->addError('codigo_barra', 'El código ingresado no existe.');
             $this->reset(['codigo_barra']);
             return;

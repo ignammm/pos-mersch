@@ -16,10 +16,15 @@ class PresupuestoConversionService
 {
     public function convertir(Presupuesto $presupuesto, ConvertirPresupuestoDTO $dto)
     {
-        return DB::transaction(function() use ($presupuesto, $dto) {
+        if($this->articuloSuperanStock($presupuesto))
+        {
+            return $this->articuloSuperanStock($presupuesto);
+        }
+
+        DB::transaction(function() use ($presupuesto, $dto) {
             // $this->validarConversion($presupuesto);
             
-            return match($dto->tipo) {
+            match($dto->tipo) {
                 'venta' => $this->convertirAVenta($presupuesto, $dto),
                 'trabajo' => $this->convertirATrabajo($presupuesto, $dto),
                 default => throw new Exception('Tipo de conversión no válido')
@@ -54,6 +59,7 @@ class PresupuestoConversionService
         
         $venta->save();
         $this->copiarDetallesAVenta($presupuesto, $venta);
+        $this->darSalidaArticulos($venta->detalles, 'venta');
         $this->marcarPresupuestoConvertido($presupuesto, Factura::class, $venta->id);
         
         // Evento opcional para notificaciones
@@ -66,18 +72,18 @@ class PresupuestoConversionService
     {
         $trabajo = new Trabajo();
         $trabajo->fill([
-            // 'presupuesto_id' => $presupuesto->id,
-            // 'cliente_id' => $presupuesto->cliente_id,
-            // 'fecha_entrega_estimada' => $dto->fecha_entrega,
-            // 'prioridad' => 'media',
-            // 'estado' => 'programado',
-            // 'observaciones' => $dto->observaciones,
-            // 'datos_tecnicos' => $dto->datos_adicionales
+            'nombre' => $dto->nombre_trabajo,
+            'fecha' => now(),
+            'vehiculo_cliente_id' => $dto->vehiculo_cliente_id,
+            'presupuesto_id' => $presupuesto->id,
+            'descripcion' => $dto->descripcion_trabajo,
+            'estado' => 'pendiente'
         ]);
         
         $trabajo->save();
         $this->copiarDetallesATrabajo($presupuesto, $trabajo);
-        $this->marcarPresupuestoConvertido($presupuesto, 'trabajo', $trabajo->id);
+        $this->darSalidaArticulos($trabajo->detalles, 'trabajo');
+        $this->marcarPresupuestoConvertido($presupuesto, Trabajo::class , $trabajo->id);
         
         return $trabajo;
     }
@@ -93,16 +99,32 @@ class PresupuestoConversionService
                 'subtotal' => $detalle->subtotal
             ]);
         }
+
     }
 
     private function copiarDetallesATrabajo(Presupuesto $presupuesto, Trabajo $trabajo): void
     {
         foreach ($presupuesto->detalles as $detalle) {
             $trabajo->detalles()->create([
-                'producto_id' => $detalle->producto_id,
+                'trabajo_id' => $trabajo->id,
+                'articulo_id' => $detalle->articulo_id,
                 'cantidad' => $detalle->cantidad,
                 'precio_unitario' => $detalle->precio_unitario,
-                'subtotal' => $detalle->subtotal
+            ]);
+        }
+    }
+
+    private function darSalidaArticulos($detalles, $tipo): void
+    {
+        foreach ($detalles as $detalle) {
+           
+            $detalle->movimientos()->create([
+                'articulo_id' => $detalle->articulo_id,
+                'cantidad' => $detalle->cantidad,
+                'tipo' => 'salida',
+                'estado_reposicion' => 'pendiente',
+                'motivo' => $tipo,
+                'observaciones' => 'Transformacion de un presupuesto a tipo '. $tipo . '.',
             ]);
         }
     }
@@ -114,5 +136,19 @@ class PresupuestoConversionService
             'tipo_conversion' => $tipo,
             'conversion_id' => $idConvertido,
         ]);
+    }
+
+    private function articuloSuperanStock(Presupuesto $presupuesto): array
+    {
+        $articulos = [];
+
+        foreach ($presupuesto->detalles as $detalle) {
+
+            if ($detalle->articulo->stock->cantidad < $detalle->cantidad) {
+                $articulos[] = $detalle->articulo->articulo;
+            }
+        }
+
+        return $articulos;
     }
 }

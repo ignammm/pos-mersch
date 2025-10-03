@@ -13,6 +13,7 @@ class Trabajo extends Model
         'nombre',
         'fecha',
         'vehiculo_cliente_id',
+        'presupuesto_id',
         'descripcion',
         'estado',
     ];

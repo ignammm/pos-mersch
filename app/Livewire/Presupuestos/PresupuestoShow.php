@@ -76,21 +76,29 @@ class PresupuestoShow extends Component
         ]);
         
         try {
-            // Obtener el presupuesto actual (ajusta según tu lógica)
+            // Obtener el presupuesto actual 
             $presupuesto = Presupuesto::find($this->presupuesto->id);
             
             // Crear DTO con los datos
             $dto = new ConvertirPresupuestoDTO(
                 tipo: $this->tipo_conversion,
                 cliente_id: $this->cliente_id,
-                vehiculo_cliente_id: $this->vehiculos_cliente_id ?? null,
+                vehiculo_cliente_id: $this->vehiculo_cliente_id ?? null,
                 nombre_trabajo: $this->nombre_trabajo ?? null,
-                descricion_trabajo: $this->descripcion_trabajo ?? null,
+                descripcion_trabajo: $this->descripcion_trabajo ?? null,
             );
             
             // Llamar al service
             $conversionService = app(PresupuestoConversionService::class);
-            $resultado = $conversionService->convertir($presupuesto, $dto);
+            $articulosSuperanStock = $conversionService->convertir($presupuesto, $dto);
+
+            if (!empty($articulosSuperanStock)) {
+                $this->mostrarConvertirPresupuesto = false;
+
+                $this->addError('cantidad', 'Los siguientes articulos superan el stock disponible: '. implode(', ', $articulosSuperanStock));
+                return;
+            }
+
 
             $this->mostrarConvertirPresupuesto = false;
 

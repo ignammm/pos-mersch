@@ -23,6 +23,14 @@
         >
             ✅ {{ session('success') }}
     </div>
+
+    @if ($errors->any())
+        <div class="bg-red-600 text-white px-4 py-2 rounded shadow-lg mb-3">
+            ⚠️ {{ $errors->first() }}
+        </div>
+    @endif
+
+
     
 </div>
 
