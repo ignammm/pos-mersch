@@ -15,9 +15,9 @@ use Livewire\Component;
 class PresupuestoCreate extends Component
 {
 
-    public $descripcion_presupuesto, $codigo_barra, $cantidad = 1, $total, $items = [], $articulosModal = [], $modalSeleccionarArticulo = false
+    public $descripcion_presupuesto, $codigo_barra, $cantidad = 1, $total, $items = [], $articulosModal = [], $mostrarModalDuplicados = false
     , $stockArticulos, $fecha_validez = 7, $presupuesto_id;
-
+    public $coincidenciasArt = [], $coincidenciasRef = [];
 
     public function mount($id = null)
     {
@@ -28,6 +28,7 @@ class PresupuestoCreate extends Component
 
             $this->presupuesto_id = $id;
             $this->descripcion_presupuesto = $presupuesto->observaciones;
+            $this->fecha_validez = $presupuesto->fecha_validez;
 
             $this->items = $presupuesto->detalles->map(function($detalle) {
                 return [
@@ -60,77 +61,117 @@ class PresupuestoCreate extends Component
 
     public function agregarArticulo()
     {
-    
         $this->validate([
             'codigo_barra' => 'required',
             'cantidad' => 'required|numeric|min:1',
         ]);
-
+        
         $existe = Articulo::where('codigo_proveedor', $this->codigo_barra)
         ->orWhere('codigo_fabricante', $this->codigo_barra)
-        ->orWhere('articulo', $this->codigo_barra)
         ->exists();
         
         if ($existe) {
             
-            if (Articulo::where('codigo_proveedor', $this->codigo_barra)
-                ->orWhere('codigo_fabricante', $this->codigo_barra)
-                ->orWhere('articulo', $this->codigo_barra)
-                ->count() <= 1)
-            {
+            // Si hay solo hay un articulo con ese codigo → agregar directo
+            $articulo = Articulo::where('codigo_proveedor', $this->codigo_barra)
+            ->orWhere('codigo_fabricante', $this->codigo_barra)
+            ->first();
             
-                $articulo = Articulo::where('codigo_proveedor', $this->codigo_barra)
-                    ->orWhere('codigo_fabricante', $this->codigo_barra)
-                    ->orWhere('articulo', $this->codigo_barra)
-                    ->first();
-                
-                if ($this->stockSuperado($articulo)) {
-                    return;
-                }
-                
-                if ($this->verificarExisteEnLista($articulo)) {
+            if (Articulo::where('id', $articulo->id)->exists()) {
+                // Verificar si ya está en la lista para sumar cantidades
+                if ($this->sumarCantidadSiExiste($articulo)) {
                     return;
                 }
                 
                 $this->agregarArticuloLista($articulo);
-                
-                $this->calcularTotal();
-                $this->reset(['codigo_barra', 'cantidad']);
-                
-                
-            } else {
-                
-                $this->articulosModal = Articulo::where('articulo', $this->codigo_barra)->get();
-                $this->modalSeleccionarArticulo = true;
                 return;
-                
             }
-             
         }
         else {
-            
+
             $referenciaRsf = ReferenciaRsf::where('codigo_rsf', $this->codigo_barra)
             ->orWhere('codigo_barra', $this->codigo_barra)
-            ->orWhere('articulo', $this->codigo_barra)
             ->first();
             
             if ($referenciaRsf) {
                 
-
-                if (ReferenciaRsf::where('articulo', $this->codigo_barra)
-                    ->count() > 1) {
-                    
-                }
-                
                 $this->crearArticulo($referenciaRsf);
                 return;
             }
-            $this->addError('codigo_barra', 'El código ingresado no existe.');
-            $this->reset(['codigo_barra']);
-            return;
         }
         
-       
+
+        //Buscar si existen articulos que compartan el mismo codigo articulo (coincidentes)
+        $this->coincidenciasArt = Articulo::where('articulo', $this->codigo_barra)
+            ->get();
+    
+        $this->coincidenciasRef = ReferenciaRsf::where('articulo', $this->codigo_barra)
+            ->get();
+        
+
+        $this->mostrarModalDuplicados = true;
+        return;
+        
+    }
+
+    public function crearArticulo($articulo_rsf)
+    {
+
+        if (!Articulo::where('codigo_proveedor', $articulo_rsf->codigo_rsf)->exists()) {
+            $articulo = Articulo::create([
+                'articulo' => $articulo_rsf->articulo,
+                'codigo_interno' => Articulo::generarCodigoInterno(),
+                'codigo_proveedor' => $articulo_rsf->codigo_rsf,
+                'codigo_fabricante' => $articulo_rsf->codigo_barra,
+                'rubro' => $articulo_rsf->tipo_txt,
+                'precio' => round($articulo_rsf->precio_lista, 0),
+                'marca' => $articulo_rsf->marca_rsf,
+                'descripcion' => $articulo_rsf->descripcion,
+                'enlace' => $articulo_rsf->enlace,
+                'unidad' => $articulo_rsf->modulo_venta,
+            ]);
+
+            $articulo->stock()->create([
+                    'cantidad' => 0,
+            ]);
+
+            $this->agregarArticuloLista($articulo);
+
+            return;
+        }
+
+        $this->addError('codigo_barra', 'El articulo que intenta crear ya ha sido creado.');
+        $this->mostrarModalDuplicados = false;
+        $this->coincidenciasArt = '';
+        $this->coincidenciasRef = '';
+
+    }
+
+    private function sumarCantidadSiExiste($articulo)
+    {
+        foreach ($this->items as $index => $item) {
+            if (
+                $item['articulo_id'] === $articulo->id
+            ) {
+                if($this->incrementarCantidad($index))
+                {
+                    return;
+                }
+                $this->items[$index]['cantidad'] += $this->cantidad;
+                $this->items[$index]['subtotal'] = $this->items[$index]['cantidad'] * $this->items[$index]['precio_unitario'];
+                $this->calcularTotal();
+                $this->codigo_barra = '';
+                $this->cantidad = 1;
+
+                $this->mostrarModalDuplicados = false;
+                $this->coincidenciasArt = '';
+                $this->coincidenciasRef = '';
+
+                return true; // ya existía y se sumó
+            }
+        }
+
+        return false; // no existía
     }
 
     public function decrementarCantidad($index)
@@ -138,41 +179,25 @@ class PresupuestoCreate extends Component
         if (isset($this->items[$index]) && $this->items[$index]['cantidad'] > 1) {
             $this->items[$index]['cantidad']--;
             $this->items[$index]['subtotal'] = $this->items[$index]['cantidad'] * $this->items[$index]['precio_unitario'];
-            $this->stockArticulos[$this->items[$index]['articulo_id']]++;
             $this->calcularTotal();
             return;
         }
         $this->addError('cantidad', 'No es posible tener una cantidad menor a 1.');
-
-
     }
 
     public function incrementarCantidad($index)
     {
-        if ($this->stockArticulos[$this->items[$index]['articulo_id']] <= 0) {
-            $this->addError('cantidad', 'La cantidad que intenta vender supera el stock. El stock disponible es de: '. Articulo::find($this->items[$index]['articulo_id'])->stock->cantidad);
-            return;
-        }
-
         if (isset($this->items[$index])) {
             $this->items[$index]['cantidad']++;
             $this->items[$index]['subtotal'] = $this->items[$index]['cantidad'] * $this->items[$index]['precio_unitario'];
-            $this->stockArticulos[$this->items[$index]['articulo_id']]--;
             $this->calcularTotal(); // si ya tenés un método de total
         }
-
-
     }
 
     public function eliminarItem($index)
     {
         if (isset($this->items[$index])) {
             $articuloId = $this->items[$index]['articulo_id'];
-
-            // devolver al stock del artículo correcto
-            if (isset($this->stockArticulos[$articuloId])) {
-                $this->stockArticulos[$articuloId] += $this->items[$index]['cantidad'];
-            }
 
             unset($this->items[$index]);
             $this->items = array_values($this->items); // reindexar
@@ -185,9 +210,7 @@ class PresupuestoCreate extends Component
     public function confirmarSeleccion($articulo_id)
     {
         $articulo = Articulo::find($articulo_id);
-        if ($this->stockSuperado($articulo)) {
-            return;
-        }
+       
         if ($this->verificarExisteEnLista($articulo)) {
             return;
         }
@@ -202,7 +225,7 @@ class PresupuestoCreate extends Component
             if ($this->stockArticulos[$articulo->id] < $this->cantidad) {
             $this->addError('cantidad', 'La cantidad que intenta vender supera el stock. El stock disponible es de: '. $this->stockDisponible($articulo));
             $this->reset(['cantidad']);
-            $this->modalSeleccionarArticulo = false;
+            $this->mostrarModalDuplicados = false;
             return true;
             }
             return false;
@@ -211,7 +234,7 @@ class PresupuestoCreate extends Component
         if (Articulo::find($articulo->id)->stock->cantidad < $this->cantidad) {
             $this->addError('cantidad', 'La cantidad que intenta vender supera el stock. El stock disponible es de: '. $this->stockDisponible($articulo));
             $this->reset(['cantidad']);
-            $this->modalSeleccionarArticulo = false;
+            $this->mostrarModalDuplicados = false;
             return true;
             
         }
@@ -239,7 +262,7 @@ class PresupuestoCreate extends Component
             
             if ($this->cantidad > $articulo->stock->cantidad) {
                 $this->addError('cantidad', 'La cantidad que intenta vender supera el stock.');
-                $this->modalSeleccionarArticulo = false;
+                $this->mostrarModalDuplicados = false;
                 return true;
             }
 
@@ -254,7 +277,6 @@ class PresupuestoCreate extends Component
             $this->items[$index]['cantidad']
         );
 
-        $this->stockArticulos[$this->items[$index]['articulo_id']] -= $this->cantidad;
         $this->calcularTotal();
         $this->reset(['codigo_barra']);
 
@@ -263,10 +285,6 @@ class PresupuestoCreate extends Component
 
     public function agregarArticuloLista($articulo)
     {
-        if ($this->stockSuperado($articulo)) {
-            return;
-        }
-
         if (!$this->verificarExisteEnLista($articulo)) {
             
             $this->items[] = [
@@ -281,12 +299,12 @@ class PresupuestoCreate extends Component
                 'subtotal' => $this->calcularSubtotal($articulo->precio, $this->cantidad),
             ];
 
-            $this->stockArticulos[$articulo->id] = Articulo::find($articulo->id)->stock->cantidad - $this->cantidad;
+            $this->stockArticulos[$articulo->id] = Stock::where('articulo_id', $articulo->id)->first()->cantidad; 
         }
 
         $this->calcularTotal();
         $this->reset(['codigo_barra', 'cantidad']);
-        $this->modalSeleccionarArticulo = false;
+        $this->mostrarModalDuplicados = false;
     }
 
     public function calcularTotal()
@@ -297,6 +315,20 @@ class PresupuestoCreate extends Component
     public function calcularSubtotal($precio, $cantidad)
     {
         return ($precio * $cantidad);
+    }
+
+    public function confirmarSeleccionArt($articulo_id)
+    {
+        $articulo = Articulo::find($articulo_id);
+        if ($this->sumarCantidadSiExiste($articulo)) {
+            return;
+        }
+        $this->agregarArticuloLista($articulo);
+    }
+
+    public function confirmarSeleccionRef($articulo_id)
+    {
+        $this->crearArticulo(ReferenciaRsf::find($articulo_id));
     }
 
     public function guardarPresupuesto()
@@ -342,7 +374,7 @@ class PresupuestoCreate extends Component
                 'numero' => Presupuesto::generarNumero(),
                 'usuario_id' => $user->id,
                 'fecha_emision' => now(),
-                'fecha_validez' => now()->addDays($this->fecha_validez),
+                'fecha_validez' => now()->addDays((int) $this->fecha_validez),
                 'subtotal' => $this->total,
                 'total_estimado' => $this->total,
                 'observaciones' => $this->descripcion_presupuesto,

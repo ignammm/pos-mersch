@@ -72,6 +72,7 @@
                     <th class="px-4 py-2 text-left text-sm text-gray-700">Marca</th>
                     <th class="px-4 py-2 text-right text-sm text-gray-700">Precio Unitario</th>
                     <th class="px-4 py-2 text-center text-sm text-gray-700">Subtotal</th>
+                    <th class="px-4 py-2 text-center text-sm text-gray-700">Stock</th>
                     <th class="px-4 py-2 text-center text-sm text-gray-700">Acciones</th>
                     
                 </tr>
@@ -102,6 +103,7 @@
                         <td class="px-4 py-2">{{ $item['marca'] }}</td>
                         <td class="px-4 py-2 text-right">${{ number_format($item['precio_unitario']), 0}}</td>
                         <td class="px-4 py-2 text-right">${{ number_format($item['subtotal'], 0) }}</td>
+                        <td class="px-4 py-2 text-right">{{ $stockArticulos[$items[$index]['articulo_id']] }}</td>
                         <td class="px-4 py-2 text-center">
                             <button wire:click="eliminarItem({{ $index }})" class="text-red-600">Eliminar</button>
                         </td>
@@ -132,7 +134,7 @@
         </x-button>
     </div>
 
-    <x-modal wire:model.live="modalSeleccionarArticulo">
+    {{-- <x-modal wire:model.live="modalSeleccionarArticulo">
         <div class="p-6 bg-gray-50 min-h-screen">
             
             <!-- Título -->
@@ -188,5 +190,8 @@
                 </button>
             </div>
         </div>
-    </x-modal>
+    </x-modal> --}}
+
+    @include('presupuestos.partials.modal-articulo-nuevo')
+
 </div>
