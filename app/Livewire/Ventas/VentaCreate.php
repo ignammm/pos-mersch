@@ -20,6 +20,7 @@ class VentaCreate extends Component
     public $total = 0;
     public $modalSeleccionarArticulo = false;
     public $articulosModal;
+    public $stockArticulos = [];
 
     public function agregarArticulo()
     {
@@ -83,49 +84,88 @@ class VentaCreate extends Component
         
     }
 
-    public function stockDisponible($articulo)
+    public function incrementarCantidad($index)
     {
-        $articulo = Articulo::find($articulo->id);
-        return $articulo->stock->cantidad;
+        if ($this->stockArticulos[$this->items[$index]['articulo_id']] <= 0) {
+            $this->addError('cantidad', 'La cantidad que intenta vender supera el stock. El stock disponible es de: '. Articulo::find($this->items[$index]['articulo_id'])->stock->cantidad);
+            return;
+        }
+
+        if (isset($this->items[$index])) {
+            $this->items[$index]['cantidad']++;
+            $this->items[$index]['subtotal'] = $this->items[$index]['cantidad'] * $this->items[$index]['precio_unitario'];
+            $this->stockArticulos[$this->items[$index]['articulo_id']]--;
+            $this->calcularTotal(); // si ya tenés un método de total
+        }
+
+
+    }
+
+    public function decrementarCantidad($index)
+    {
+        if (isset($this->items[$index]) && $this->items[$index]['cantidad'] > 1) {
+            $this->items[$index]['cantidad']--;
+            $this->items[$index]['subtotal'] = $this->items[$index]['cantidad'] * $this->items[$index]['precio_unitario'];
+            $this->stockArticulos[$this->items[$index]['articulo_id']]++;
+            $this->calcularTotal();
+            return;
+        }
+        $this->addError('cantidad', 'No es posible tener una cantidad menor a 1.');
+
+
     }
 
     public function stockSuperado($articulo)
     {
-        
-        if (Articulo::find($articulo->id)->stock->cantidad < $this->cantidad) {
-            $this->addError('cantidad', 'La cantidad que intenta vender supera el stock. El stock disponible es de: '. $this->stockDisponible($articulo) . '.');
+        if (isset($this->stockArticulos[$articulo->id])) {
+
+            if ($this->stockArticulos[$articulo->id] < $this->cantidad) {
+            $this->addError('cantidad', 'La cantidad que intenta vender supera el stock. El stock disponible es de: '. $this->stockDisponible($articulo));
             $this->reset(['cantidad']);
             $this->modalSeleccionarArticulo = false;
             return true;
+            }
+            return false;
+
+        }
+        if (Articulo::find($articulo->id)->stock->cantidad < $this->cantidad) {
+            $this->addError('cantidad', 'La cantidad que intenta vender supera el stock. El stock disponible es de: '. $this->stockDisponible($articulo));
+            $this->reset(['cantidad']);
+            $this->modalSeleccionarArticulo = false;
+            return true;
+            
         }
         return false;
     }
 
+    public function stockDisponible($articulo)
+    {
+        if (isset($this->items[$articulo->id])) {
+           return $this->stockArticulos[$articulo->id];
+        }
+        $articulo = Articulo::find($articulo->id);
+        return $articulo->stock->cantidad;
+    }
+
     public function verificarExisteEnLista($articulo)
     {
-        foreach ($this->items as $index => $item) {
-            if (
-                $item['articulo_id'] === $articulo->id
-            ) {
-                if(($this->items[$index]['cantidad'] + $this->cantidad) > $articulo->stock->cantidad)
-                {
-                    $this->addError('cantidad', 'La cantidad que intenta vender supera el stock.');
-                    $this->modalSeleccionarArticulo = false;
-                    return true;
-                }
-                $this->items[$index]['cantidad'] += $this->cantidad;
-                $this->items[$index]['subtotal'] = $this->calcularSubtotal(
-                    $this->items[$index]['precio_unitario'],
-                    $this->items[$index]['cantidad'],
-                    $this->items[$index]['descuento_unitario']
-                );
-                $this->calcularTotal();
-                $this->reset(['codigo_barra']);
-                return true;
-            }
+        $index = collect($this->items)->search(fn($item) => $item['articulo_id'] === $articulo->id);
 
+        if ($index === false) {
             return false;
         }
+
+        $this->items[$index]['cantidad'] += $this->cantidad;
+        $this->items[$index]['subtotal'] = $this->calcularSubtotal(
+            $this->items[$index]['precio_unitario'],
+            $this->items[$index]['cantidad']
+        );
+
+        $this->stockArticulos[$this->items[$index]['articulo_id']] -= $this->cantidad;
+        $this->calcularTotal();
+        $this->reset(['codigo_barra']);
+
+        return true;
     }
 
     public function agregarArticuloLista($articulo)
@@ -148,6 +188,8 @@ class VentaCreate extends Component
                 'descuento_unitario' => $this->descuento,
                 'subtotal' => $this->calcularSubtotal($this->descuentoUnitario($articulo->precio, $this->descuento), $this->cantidad),
             ];
+
+            $this->stockArticulos[$articulo->id] = Articulo::find($articulo->id)->stock->cantidad - $this->cantidad;
         }
 
         $this->calcularTotal();
@@ -184,11 +226,19 @@ class VentaCreate extends Component
     public function eliminarItem($index)
     {
         if (isset($this->items[$index])) {
+            $articuloId = $this->items[$index]['articulo_id'];
+
+            // devolver al stock del artículo correcto
+            if (isset($this->stockArticulos[$articuloId])) {
+                $this->stockArticulos[$articuloId] += $this->items[$index]['cantidad'];
+            }
+
             unset($this->items[$index]);
-            $this->items = array_values($this->items);
+            $this->items = array_values($this->items); // reindexar
             $this->calcularTotal();
         }
     }
+
 
     public function confirmarSeleccion($articulo_id)
     {
@@ -228,7 +278,7 @@ class VentaCreate extends Component
         ]);
 
         foreach ($this->items as $item) {
-            DetalleVenta::create([
+            $detalle = DetalleVenta::create([
                 'factura_id' => $venta->id,
                 'articulo_id' => $item['articulo_id'],
                 'cantidad' => $item['cantidad'],
@@ -236,6 +286,14 @@ class VentaCreate extends Component
                 'descuento_aplicado' => $item['descuento_unitario'] ?? 0,
                 'subtotal' => $item['subtotal'],
             ]);
+
+            $detalle->movimientos()->create([
+                    'articulo_id' => $item['articulo_id'],
+                    'cantidad' => $item['cantidad'],
+                    'tipo' => 'salida',
+                    'motivo' => 'venta',
+                    'estado_reposicion' => 'pendiente',
+             ]);
 
             // Descontar stock de tabla stock
             $stock = Stock::where('articulo_id', $item['articulo_id'])->first();

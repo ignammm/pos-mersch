@@ -13,6 +13,13 @@ class VentasIndex extends Component
 
     public $ventaSeleccionada = null;
     public $mostrarDetalle = false;
+    public $fechaDesde;
+    public $fechaHasta;
+    public $nombreCliente;
+
+    public function updatingFechaDesde() { $this->resetPage(); }
+    public function updatingFechaHasta() { $this->resetPage(); }
+    public function updatingnombreCliente() { $this->resetPage(); }
 
     public function verDetalle($facturaId)
     {
@@ -28,8 +35,29 @@ class VentasIndex extends Component
 
     public function render()
     {
+        $query = Factura::with('cliente');
+
+        // Filtrar por fecha - FORMA CORRECTA
+        if ($this->fechaDesde || $this->fechaHasta) {
+            if ($this->fechaDesde) {
+                $query->whereDate('fecha', '>=', $this->fechaDesde);
+            }
+            if ($this->fechaHasta) {
+                $query->whereDate('fecha', '<=', $this->fechaHasta);
+            }
+        }
+
+        // Filtro por código o nombre del artículo
+        if ($this->nombreCliente) {
+            $query->whereHas('cliente', function ($q) {
+                $q->where('nombre', 'like', '%' . $this->nombreCliente . '%');
+            });
+        }
+
+        $ventas = $query->orderByDesc('id')->paginate(10);
+        
         return view('livewire.ventas.ventas-index', [
-            'ventas' => Factura::with('cliente')->orderByDesc('fecha')->paginate(8),
+            'ventas' => $ventas,
         ]);
     }
 }

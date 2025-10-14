@@ -6,6 +6,7 @@ namespace App\Services;
 use App\DTO\ConvertirPresupuestoDTO;
 use App\Models\Factura;
 use App\Models\Presupuesto;
+use App\Models\Stock;
 use App\Models\Venta;
 use App\Models\Trabajo;
 use Illuminate\Support\Facades\DB;
@@ -126,6 +127,8 @@ class PresupuestoConversionService
                 'motivo' => $tipo,
                 'observaciones' => 'Transformacion de un presupuesto a tipo '. $tipo . '.',
             ]);
+
+           $detalle->articulo->stock()->decrement('cantidad', $detalle->cantidad);
         }
     }
     

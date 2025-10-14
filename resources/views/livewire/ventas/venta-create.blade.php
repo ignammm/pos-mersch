@@ -1,5 +1,14 @@
 <div class="p-4">
-    <h1 class="text-4xl font-bold mb-10">Venta</h1>
+    <div class="flex items-center">
+        <x-button onclick="window.location.href='{{ route('ventas.index') }}'">
+            <svg class="w-4 h-4 text-gray-1200 dark:text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5H1m0 0 4 4M1 5l4-4"/>
+            </svg>
+        </x-button>
+        <div class="inline-flex items-center px-4 py-2">
+            <h1 class="text-4xl font-bold mb-2 ">Nueva Venta</h1>
+        </div>
+    </div>
 
     <div 
         x-data="{ mostrar: false }" 
@@ -123,7 +132,23 @@
                         <td class="px-4 py-2">{{ $item['nombre'] }}</td>
                         <td class="px-4 py-2">{{ $item['rubro'] }}</td>
                         <td class="px-4 py-2">{{ $item['marca'] }}</td>
-                        <td class="px-4 py-2">{{ $item['cantidad'] }}</td>
+                        <td class="px-4 py-2">
+                            <div class="flex items-center space-x-2">
+                                <button 
+                                    wire:click="decrementarCantidad({{ $index }})" 
+                                    class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300">
+                                    -
+                                </button>
+
+                                <span>{{ $item['cantidad'] }}</span>
+
+                                <button 
+                                    wire:click="incrementarCantidad({{ $index }})" 
+                                    class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300">
+                                    +
+                                </button>
+                            </div>
+                        </td>
                         <td class="px-4 py-2 text-right">${{ number_format($item['precio_unitario']), 0}}</td>
                         <td class="px-4 py-2 text-right">{{ number_format($item['descuento_unitario']), 0}}%</td>
                         <td class="px-4 py-2 text-right">${{ number_format($item['subtotal'], 0) }}</td>

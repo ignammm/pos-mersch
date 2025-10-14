@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pedidos;
 
+use App\Models\DetallePedido;
 use App\Models\DetalleVenta;
 use App\Models\Pedido;
 use Livewire\Component;
@@ -21,15 +22,11 @@ class PedidosIndex extends Component
 
     public function render()
     {
-        // Obtener IDs de artículos que están guardados como pedidos
-        $articulosPedidos = DetalleVenta::where('repuesto', 1)->pluck('articulo_id');
-
-        $query = DetalleVenta::with(['articulo', 'factura'])
-            ->whereIn('articulo_id', $articulosPedidos);
+        $query = DetallePedido::with(['articulo', 'pedido']);
 
         // Filtrar por fecha
         if ($this->fechaDesde || $this->fechaHasta) {
-            $query->whereHas('factura', function ($q) {
+            $query->whereHas('pedido', function ($q) {
                 if ($this->fechaDesde) {
                     $q->whereDate('fecha', '>=', $this->fechaDesde);
                 }

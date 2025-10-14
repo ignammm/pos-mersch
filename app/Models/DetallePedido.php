@@ -14,6 +14,7 @@ class DetallePedido extends Model
         'articulo_id',
         'cantidad',
         'pedido_id',
+        'detalle_venta_id',
         'repuesto',
     ];
 
@@ -24,6 +25,11 @@ class DetallePedido extends Model
 
      public function pedido()
     {
-        return $this->belongsTo(Articulo::class);
+        return $this->belongsTo(Pedido::class);
+    }
+
+    public function detalle_venta()
+    {
+        return $this->belongsTo(DetalleVenta::class);
     }
 }

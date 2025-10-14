@@ -29,6 +29,7 @@ class PedidoCreate extends Component
             DetallePedido::create([
                 'pedido_id' => $pedido->id,
                 'articulo_id' => $detalle->articulo->id,
+                'detalle_venta_id' => $detalle->id,
                 'cantidad' => $detalle->cantidad,
             ]);
         }
