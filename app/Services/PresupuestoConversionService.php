@@ -52,6 +52,7 @@ class PresupuestoConversionService
             'user_id' => Auth::user()->id,
             'presupuesto_id' => $presupuesto->id,
             'monto_original' => $presupuesto->subtotal,
+            'saldo_pendiente' => $presupuesto->subtotal,
             'estado' => 'pendiente',
             'fecha' => now(),
             'tipo_comprobante' => 'Ticket',

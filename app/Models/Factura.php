@@ -18,12 +18,17 @@ class Factura extends Model
         'presupuesto_id',
         'numero',
         'monto_original',
+        'saldo_pendiente',
         'monto_final',
         'descuento_aplicado',
         'forma_pago',
         'estado',
     ];
 
+    const ESTADO_PENDIENTE = 'pendiente';
+    const ESTADO_PARCIAL = 'parcial';
+    const ESTADO_PAGADA = 'pagada';
+    const ESTADO_MOROSO = 'moroso';
 
     public function cliente()
     {
@@ -33,6 +38,33 @@ class Factura extends Model
     public function detalles()
     {
         return $this->hasMany(DetalleVenta::class);
+    }
+
+    // Relación con pagos
+    public function pagos()
+    {
+        return $this->hasMany(Pago::class);
+    }
+
+    // Método para calcular saldo pendiente
+    public function calcularSaldoPendiente()
+    {
+        $totalPagado = $this->pagos()->sum('monto');
+        return $this->monto_original - $totalPagado;
+    }
+
+    // Método para actualizar estado
+    public function actualizarEstadoPago()
+    { 
+        if ($this->saldo_pendiente <= 0) {
+            $this->estado = self::ESTADO_PAGADA;
+        } elseif ($this->saldo_pendiente < $this->monto_original) {
+            $this->estado = self::ESTADO_PARCIAL;
+        } else {
+            $this->estado = self::ESTADO_PENDIENTE;
+        }
+        
+        $this->save();
     }
 
     public static function numeroComprobante($tipo_comprobante)

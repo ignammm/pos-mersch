@@ -1,8 +1,9 @@
 <div class="space-y-6">
+    
     <!-- Header mejorado con icono y búsqueda -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div class="flex items-center gap-3">
-            <div class="p-2 bg-primary-500 rounded-lg text-white">
+            <div class="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl text-white shadow-lg">
                 <i class="fas fa-receipt text-xl"></i>
             </div>
             <div>
@@ -11,17 +12,6 @@
             </div>
         </div>
         
-        <div class="relative w-full md:w-auto">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i class="fas fa-search text-gray-400"></i>
-            </div>
-            <input 
-                wire:model.live="search"
-                type="text" 
-                class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 w-full transition-all duration-200" 
-                placeholder="Buscar ventas..."
-            >
-        </div>
     </div>
 
     <!-- Filtros mejorados -->
@@ -31,14 +21,14 @@
             <div>
                 <label for="nombreCliente" class="block text-sm font-medium text-gray-700 mb-2">
                     <i class="fas fa-search mr-2 text-gray-400"></i>
-                    Código/Nombre Artículo
+                    Cliente
                 </label>
                 <div class="relative">
                     <input 
                         type="text" 
                         id="nombreCliente" 
                         wire:model.live="nombreCliente" 
-                        placeholder="Buscar artículo..."
+                        placeholder="Buscar cliente..."
                         class="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
                     >
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -74,9 +64,7 @@
 
         </div>
     </div>
-
-   
-
+ 
     <!-- Tabla mejorada -->
     <div class="bg-white rounded-xl shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
@@ -112,18 +100,67 @@
                                 <div class="text-sm font-semibold text-gray-900">${{ number_format($venta->monto_original, 2) }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                    Completada
+                                @php
+                                    $configEstados = [
+                                        'pendiente' => [
+                                            'clases' => 'bg-yellow-100 text-yellow-800',
+                                            'texto' => 'Pendiente',
+                                            'icono' => 'clock'
+                                        ],
+                                        'parcial' => [
+                                            'clases' => 'bg-blue-100 text-blue-800', 
+                                            'texto' => 'Pago Parcial',
+                                            'icono' => 'money-bill-wave'
+                                        ],
+                                        'pagada' => [
+                                            'clases' => 'bg-green-100 text-green-800',
+                                            'texto' => 'Pagada',
+                                            'icono' => 'check-circle'
+                                        ],
+                                        'moroso' => [
+                                            'clases' => 'bg-red-100 text-red-800',
+                                            'texto' => 'Moroso',
+                                            'icono' => 'exclamation-triangle'
+                                        ],
+                                        'anulada' => [
+                                            'clases' => 'bg-gray-100 text-gray-800',
+                                            'texto' => 'Anulada', 
+                                            'icono' => 'ban'
+                                        ]
+                                    ];
+                                    
+                                    // CORRECCIÓN: Usar el estado real de la venta
+                                    $estadoVenta = $venta->estado ?? 'pendiente';
+                                    $config = $configEstados[$estadoVenta] ?? $configEstados['pendiente'];
+                                @endphp
+                                <span class="px-3 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full {{ $config['clases'] }}">
+                                    <i class="fas fa-{{ $config['icono'] }} mr-1 text-xs"></i>
+                                    {{ $config['texto'] }}
                                 </span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                            <td class="flex px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                                 <button 
                                     wire:click="verDetalle({{ $venta->id }})" 
-                                    class="text-primary-600 hover:text-primary-900 bg-primary-50 hover:bg-primary-100 px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 mx-auto"
+                                    class="text-primary-600 hover:text-primary-900 bg-primary-50 hover:bg-primary-100 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 mx-auto"
                                 >
                                     <i class="fas fa-eye"></i>
                                     Ver Detalles
                                 </button>
+                                <!-- En la columna de acciones, actualiza el botón de pagar -->
+                                @if($venta->estado !== 'pagada')
+                                <button 
+                                    wire:click="ingresarPago({{ $venta->id }})" 
+                                    class="text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 px-3 py-1 rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
+                                >
+                                    <i class="fas fa-credit-card"></i>
+                                    Pagar
+                                </button>
+                                @else
+                                <span class="text-gray-400 bg-gray-100 px-3 py-1 rounded-lg text-sm">
+                                    <i class="fas fa-check"></i>
+                                    Pagada
+                                </span>
+                                @endif
                             </td>
                         </tr>
                     @empty
@@ -150,7 +187,7 @@
     </div>
 
     <!-- Modal de detalles mejorado -->
-    @if($mostrarDetalle && $ventaSeleccionada)
+    @if($mostrarDetalle && $facturaSeleccionada)
         <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 fade-in">
             <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden slide-in">
                 
@@ -160,7 +197,7 @@
                     <div class="mb-6">
                         <h4 class="text-lg font-semibold text-gray-800 mb-3">Productos Vendidos</h4>
                         <div class="space-y-3">
-                            @foreach($ventaSeleccionada->detalles as $detalle)
+                            @foreach($facturaSeleccionada->detalles as $detalle)
                                 <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
                                     <div class="flex-1">
                                         <p class="font-medium text-gray-900">{{ $detalle->articulo->articulo ?? 'Artículo eliminado' }}</p>
@@ -183,7 +220,7 @@
                         <div class="space-y-2">
                             <div class="flex justify-between text-gray-600">
                                 <span>Subtotal:</span>
-                                <span>${{ number_format($ventaSeleccionada->monto_original, 2) }}</span>
+                                <span>${{ number_format($facturaSeleccionada->monto_original, 2) }}</span>
                             </div>
                             <div class="flex justify-between text-gray-600">
                                 <span>Impuestos:</span>
@@ -191,7 +228,7 @@
                             </div>
                             <div class="flex justify-between text-lg font-bold text-gray-800 pt-2 border-t">
                                 <span>Total:</span>
-                                <span>${{ number_format($ventaSeleccionada->monto_original, 2) }}</span>
+                                <span>${{ number_format($facturaSeleccionada->monto_original, 2) }}</span>
                             </div>
                         </div>
                     </div>
@@ -210,6 +247,9 @@
             </div>
         </div>
     @endif
+
+    @include('pagos/partials/modal-pagar');
+
     <!-- Agregar estos estilos para mejorar la paginación -->
     <style>
         .pagination {

@@ -1,13 +1,18 @@
 <?php
 
 use App\Http\Controllers\PresupuestoConversionController;
+use App\Livewire\Cajas\CerrarCaja;
 use App\Livewire\articulos\ArticuloCreate;
 use App\Livewire\articulos\ArticuloEdit;
 use App\Livewire\articulos\ArticuloIndex;
+use App\Livewire\Cajas\AbrirCaja;
 use App\Livewire\Clientes\ClienteCreate;
 use App\Livewire\Clientes\ClienteEdit;
 use App\Livewire\Clientes\ClientesIndex;
+use App\Livewire\CuentasCorrientes\CuentaCorrientesIndex;
 use App\Livewire\Ingresos\IngresoCreate;
+use App\Livewire\Pagos\ListaPagos;
+use App\Livewire\Pagos\ProcesarPago;
 use App\Livewire\Pedidos\PedidoCreate;
 use App\Livewire\Pedidos\PedidosIndex;
 use App\Livewire\Presupuestos\PresupuestoCreate;
@@ -62,4 +67,13 @@ Route::middleware(['auth','verified'])->group(function () {
     
     Route::post('/presupuestos/{presupuesto}/convertir', [PresupuestoConversionController::class, 'store'])
         ->name('presupuestos.convertir.store');
+
+    Route::get('/pagos', ListaPagos::class)->name('pagos.index');
+    Route::get('/pagos/nuevo', ProcesarPago::class)->name('pagos.nuevo');
+
+    Route::get('/cajas/abrir', AbrirCaja::class)->name('cajas.abrir');
+    Route::get('/cajas/cerrar', CerrarCaja::class)->name('cajas.cerrar');
+
+    Route::get('/cuentas-corrientes', CuentaCorrientesIndex::class)->name('cuentas-corrientes.index');
+
 });
