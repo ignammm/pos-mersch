@@ -5,14 +5,14 @@ namespace App\Livewire\articulos;
 use App\Models\Articulo;
 use App\Models\Proveedor;
 use App\Models\ReferenciaRsf;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class ArticuloCreate extends Component
 {
 
     public $articulo, $codigo_proveedor, $codigo_fabricante, $rubro, $precio, $descripcion, $marca, $unidad, $proveedor_id, $enlace;
-    
-    
+
     public function updatedCodigoProveedor($value)
     {
         $referencia = ReferenciaRsf::where('codigo_rsf', $value)->first();
@@ -23,7 +23,7 @@ class ArticuloCreate extends Component
             $this->marca = $referencia->marca_rsf;
             $this->descripcion = $referencia->descripcion;
             $this->rubro = $referencia->tipo_txt;
-            $this->precio = round($referencia->precio_lista, 0); 
+            $this->precio = round($referencia->precio_lista, 0);
             $this->unidad = $referencia->modulo_venta;
             $this->descripcion = $referencia->descripcion;
             $this->enlace = $referencia->enlace;
@@ -32,6 +32,7 @@ class ArticuloCreate extends Component
         }
     }
 
+    #[On('selectSuggestion')]
     public function updatedCodigoFabricante($value)
     {
         $referencia = ReferenciaRsf::where('codigo_barra', $value)->first();
@@ -42,19 +43,21 @@ class ArticuloCreate extends Component
             $this->marca = $referencia->marca_rsf;
             $this->descripcion = $referencia->descripcion;
             $this->rubro = $referencia->tipo_txt;
-            $this->precio = round($referencia->precio_lista, 0); 
+            $this->precio = round($referencia->precio_lista, 0);
             $this->unidad = $referencia->modulo_venta;
             $this->descripcion = $referencia->descripcion;
             $this->enlace = $referencia->enlace;
         } else {
             $this->addError('codigo_proveedor', 'Articulo no encontrado en referencias. Complete los campos.');
+            return;
         }
+        $this->resetErrorBag('codigo_proveedor');
     }
 
 
     public function submit()
     {
-    
+
         $this->validate([
             'articulo' => 'required|string|max:100',
             'codigo_proveedor'  => 'required|string|unique:articulos,codigo_proveedor|max:100',
@@ -90,7 +93,6 @@ class ArticuloCreate extends Component
             'marca' => $this->marca,
             'unidad' => $this->unidad,
             'proveedor_id' => $this->proveedor_id,
-           
         ]);
 
         session()->flash('message', 'Articulo creado correctamente!');

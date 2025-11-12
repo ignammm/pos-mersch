@@ -17,7 +17,7 @@ class IngresoCreate extends Component
     public $codigo_barra;
     public $items = [];
     public $referenciaSeleccionada;
-  
+
     public $existen_duplicados = false;
     public $articulosDuplicados = [];
     public $mostrarModalDuplicados = false;
@@ -26,67 +26,56 @@ class IngresoCreate extends Component
     public $coincidenciasRef;
 
 
-   public function agregarArticulo()
+    public function agregarArticulo()
     {
         $this->validate([
             'codigo_barra' => 'required',
             'cantidad' => 'required|numeric|min:1',
         ]);
-        
-        $existe = Articulo::where('codigo_proveedor', $this->codigo_barra)
-        ->orWhere('codigo_fabricante', $this->codigo_barra)
-        ->exists();
-        
-        if ($existe) {
-            
-            // Si hay solo hay un articulo con ese codigo → agregar directo
-            $articulo = Articulo::where('codigo_proveedor', $this->codigo_barra)
-            ->orWhere('codigo_fabricante', $this->codigo_barra)
-            ->first();
-            
-            if (Articulo::where('id', $articulo->id)->exists()) {
-                // Verificar si ya está en la lista para sumar cantidades
-                if ($this->sumarCantidadSiExiste($articulo)) {
-                    return;
-                }
-                
-                $this->agregarArticuloListado($articulo);
-                return;
-            }
-        }
-        else {
 
-            $referenciaRsf = ReferenciaRsf::where('codigo_rsf', $this->codigo_barra)
+        $refItems = ReferenciaRsf::where('codigo_rsf', $this->codigo_barra)
             ->orWhere('codigo_barra', $this->codigo_barra)
-            ->first();
-            
-            if ($referenciaRsf) {
-                
-                $this->crearArticulo($referenciaRsf);
+            ->orWhere('articulo', $this->codigo_barra);
+
+        if ($refItems->count() === 0) {
+            $this->addError('codigo_barra', 'El articulo no existe.');
+            return;
+        };
+
+        $articuloExists = Articulo::where('codigo_proveedor', $this->codigo_barra)
+            ->orWhere('codigo_fabricante', $this->codigo_barra)
+            ->orWhere('articulo', $this->codigo_barra);
+
+        if ($articuloExists->count() > 0) {
+            if ($refItems->count() > 1) {
+                $this->coincidenciasArt = $articuloExists->get();
+            } else {
+                $this->agregarArticuloListado($articuloExists->first());
                 return;
             }
         }
-        
 
-        //Buscar si existen articulos que compartan el mismo codigo articulo (coincidentes)
-        $this->coincidenciasArt = Articulo::where('articulo', $this->codigo_barra)
-            ->get();
-    
-        $this->coincidenciasRef = ReferenciaRsf::where('articulo', $this->codigo_barra)
-            ->get();
-        
-        // Si hay coincidencia → mostrar modal
-        
-        $this->existen_duplicados = true;
-        $this->mostrarModalDuplicados = true;
-        return;
-        
+        $articuloExists = $articuloExists->get();
+        $refItems = $refItems->get();
+        if ($this->coincidenciasArt->isNotEmpty()) {
+            $filteredRefItems = $refItems->reject(function ($refItem) use ($articuloExists) {
+                return $articuloExists->contains('articulo', $refItem->articulo);
+            });
+            $this->coincidenciasArt = $filteredRefItems;
+        }
+
+        $this->coincidenciasRef = $refItems;
+        $this->mostrarModalDuplicados($refItems);
     }
 
-    private function verificarArticulosCoincidentes()
+
+    private function mostrarModalDuplicados()
     {
-
+        $this->mostrarModalDuplicados = true;
+        $this->existen_duplicados = true;
     }
+
+    private function verificarArticulosCoincidentes() {}
 
     private function sumarCantidadSiExiste($articulo)
     {
@@ -113,18 +102,19 @@ class IngresoCreate extends Component
     }
 
 
-    public function agregarArticuloListado($articulo){
+    public function agregarArticuloListado($articulo)
+    {
 
         $this->items[] = [
-                'articulo_id' => $articulo->id,
-                'nombre' => $articulo->articulo,
-                'rubro' => $articulo->rubro,
-                'marca' => $articulo->marca,
-                'codigo_proveedor' => $articulo->codigo_proveedor,
-                'codigo_fabricante' => $articulo->codigo_fabricante,
-                'cantidad' => $this->cantidad,
-                'precio_unitario' => $articulo->precio,
-                'subtotal' => ($this->cantidad * $articulo->precio),
+            'articulo_id' => $articulo->id,
+            'nombre' => $articulo->articulo,
+            'rubro' => $articulo->rubro,
+            'marca' => $articulo->marca,
+            'codigo_proveedor' => $articulo->codigo_proveedor,
+            'codigo_fabricante' => $articulo->codigo_fabricante,
+            'cantidad' => $this->cantidad,
+            'precio_unitario' => $articulo->precio,
+            'subtotal' => ($this->cantidad * $articulo->precio),
         ];
 
         $this->calcularTotal();
@@ -135,7 +125,6 @@ class IngresoCreate extends Component
         $this->coincidenciasArt = '';
         $this->coincidenciasRef = '';
         $this->referenciaSeleccionada = null;
-
     }
 
     public function confirmarSeleccionArt($id)
@@ -145,7 +134,6 @@ class IngresoCreate extends Component
             return;
         }
         $this->agregarArticuloListado($articulo);
-       
     }
 
     public function confirmarSeleccionRef($id)
@@ -182,7 +170,6 @@ class IngresoCreate extends Component
         $this->coincidenciasArt = '';
         $this->coincidenciasRef = '';
         $this->referenciaSeleccionada = null;
-
     }
 
 
@@ -255,7 +242,6 @@ class IngresoCreate extends Component
 
                 $stock->cantidad += $item['cantidad'];
                 $stock->save();
-
             }
 
             DB::commit();
@@ -263,14 +249,13 @@ class IngresoCreate extends Component
             $this->dispatch('ingreso-create');
 
             $this->reset();
-
         } catch (\Exception $e) {
             DB::rollBack();
             session()->flash('error', 'Error al guardar: ' . $e->getMessage());
         }
     }
 
-   public function eliminarItem($index)
+    public function eliminarItem($index)
     {
         if (isset($this->items[$index])) {
             unset($this->items[$index]);
@@ -287,5 +272,4 @@ class IngresoCreate extends Component
             'proveedores' => Proveedor::all(),
         ]);
     }
-
 }

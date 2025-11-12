@@ -3,9 +3,14 @@
 namespace App\Livewire\articulos;
 
 use App\Models\Articulo;
+use App\Services\ArticulosService;
+use App\Services\ProveedoresService;
+use App\Services\RepositoryService;
+use Livewire\Attributes\Lazy;
 use Livewire\Component;
 use Livewire\WithPagination;
 
+#[Lazy]
 class ArticuloIndex extends Component
 {
     use WithPagination;
@@ -14,27 +19,40 @@ class ArticuloIndex extends Component
 
     protected $paginationTheme = 'tailwind';
 
+    protected $articuloService;
+    protected $proveedorService;
+
     public function updatingSearch()
     {
         $this->resetPage(); // resetea la paginación al buscar
     }
 
+    public function placeholder()
+    {
+        return view('components.loading-page', [
+            'variant' => 'inline',
+            'message' => 'Cargando articulos...',
+            'color' => 'blue',
+        ])->render();
+    }
+
+    public function mount()
+    {
+        $this->articuloService = new ArticulosService();
+        $this->proveedorService = new ProveedoresService();
+    }
+
     public function render()
     {
-        $articulos = Articulo::query()
-        ->where(function($query) {
-            $query->where('articulo', 'like', '%' . $this->search . '%')
-                ->orWhere('codigo_fabricante', 'like', '%' . $this->search . '%')
-                ->orWhere('codigo_proveedor', 'like', '%' . $this->search . '%')
-                ->orWhere('rubro', 'like', '%' . $this->search . '%')
-                ->orWhere('descripcion', 'like', '%' . $this->search . '%')
-                ->orWhere('marca', 'like', '%' . $this->search . '%');
-        })
-        ->orderBy('id', 'desc')
-        ->paginate(9);
+        $result = $this->articuloService->get([]);
+        $proveedores_result = $this->proveedorService->get(['paginate' => false]);
+        if (!$result->successful){
+         return view('livewire.articulos.articulo-index', [
+             'articulos' => [],
+             'proveedores' => [],
+         ]);
+        }
 
-
-        return view('livewire.articulos.articulo-index', compact('articulos'));
-       
+        return view('livewire.articulos.articulo-index', ['articulos' => $result->data, 'proveedores' => $proveedores_result->data]);
     }
 }

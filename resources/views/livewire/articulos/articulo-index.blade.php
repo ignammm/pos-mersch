@@ -1,61 +1,89 @@
-<div class="max-w-7xl">
+@php
+    $proveedoresOptions = [];
+    if (isset($proveedores) && count($proveedores->items) > 0) {
+        foreach ($proveedores->items as $proveedor) {
+            $proveedoresOptions[$proveedor['id']] = $proveedor['nombre'];
+        }
+    }
+@endphp
 
-    <p class="text-4xl font-bold text-gray-900 dark:text-black pb-3">Articulos</p>
 
-    <div class="flex justify-between mb-4">
-        <input
-            type="text"
-            wire:model.live="search"
-            class="rounded border-gray-300 shadow-sm"
-            placeholder="Buscar artículo..."
-        >
-
-        <a href="{{ route('articulos.create') }}"
-           class="bg-blue-600 hover:bg-blue-700 text-white  px-4 py-2 rounded">
-            + Nuevo Artículo        
-        </a>
-    </div>
-
-    <div class="bg-white shadow rounded">
-        <table class="min-w-full divide-y divide-gray-200 ">
-            <thead class="bg-gray-800">
-                <tr>
-                    <th class="px-4 py-2 text-left text-sm text-white">Marca</th>
-                    <th class="px-4 py-2 text-left text-sm text-white">Articulo</th>
-                    <th class="px-4 py-2 text-left text-sm text-white">Rubro</th>
-                    <th class="px-4 py-2 text-left text-sm text-white">Stock</th>
-                    <th class="px-4 py-2 text-right text-sm text-white">Precio</th>
-                    <th class="px-4 py-2 text-center text-sm text-white">Acciones</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-                @forelse ($articulos as $articulo)
-                    <tr>
-                        <td class="px-4 py-2">{{ $articulo->marca }}</td>
-                        <td class="px-4 py-2">{{ $articulo->articulo }}</td>
-                        <td class="px-4 py-2">{{ $articulo->rubro }}</td>
-                        <td class="px-4 py-2">{{ $articulo->stock->cantidad ?? 0 }}</td>
-                        <td class="px-4 py-2 text-right">${{ number_format($articulo->precio, 2) }}</td>
-                        <td class="px-4 py-2 text-center">
-                            <a href="{{ route('articulos.edit', $articulo) }}"
-                               class="text-blue-600 hover:underline text-sm">
-                               Ver
-                            </a>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="6" class="px-4 py-4 text-center text-gray-500">
-                            No se encontraron artículos.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-
-    <div class="mt-4">
-        {{ $articulos->links() }}
-    </div>
-
+<div class="max-w-screen">
+    <livewire:crud-table title="Articulos"
+    subtitle="Mostrando registros"
+    :serviceName="'ArticulosService'"
+    :rows="$articulos->items ?? []"
+    :columns="[
+            [
+                'name' => 'id',
+                'label' => 'ID',
+            ],
+            [
+                'name' => 'articulo',
+                'label' => 'Articulo',
+            ],
+            [
+                'name' => 'codigo_interno',
+                'label' => 'Código interno',
+            ],
+            [
+                'name' => 'codigo_fabricante',
+                'label' => 'Código fabricante',
+            ],
+            [
+                'name' => 'rubro',
+                'label' => 'Rubro',
+            ],
+            [
+                'name' => 'marca',
+                'label' => 'Marca',
+            ],
+            [
+                'name' => 'precio',
+                'label' => 'Precio',
+            ],
+            [
+                'name' => 'unidad',
+                'label' => 'Unidad',
+            ],
+        ]"
+        :actions="['edit']"
+        :sort_columns="['id', 'articulo', 'codigo_interno', 'codigo_fabricante', 'rubro', 'marca', 'precio']"
+        :searchable_columns="[
+            'articulo' => 'Articulo',
+            'codigo_interno' => 'Código interno',
+            'codigo_fabricante' => 'Código fabricante',
+            'codigo_proveedor' => 'Código proveedor',
+            'rubro' => 'Rubro',
+            'marca' => 'Marca',
+            'proveedor.id' => 'Proveedor',
+        ]"
+        :search_column="'articulo'"
+        :show_actions="true"
+        :route_name="'articulos'"
+        :currentPage="1"
+        :totalPages="1"
+        :search_placeholder="'Buscar articulo...'"
+        :item_name="'articulo'"
+        :item_plural_name="'articulos'"
+        :filters="[
+            [
+                'name' => 'articulo',
+                'label' => 'Articulo',
+                'type' => 'text',
+                'rules' => ['required', 'min:3', 'max:100'],
+            ],
+            [
+                'name' => 'codigo_interno',
+                'label' => 'Código interno',
+                'type' => 'text',
+                'rules' => ['required', 'min:3', 'max:100'],
+            ],
+            [
+                'name' => 'proveedor.id',
+                'label' => 'Proveedor',
+                'type' => 'select',
+                'options' => $proveedoresOptions,
+            ],
+        ]" />
 </div>
