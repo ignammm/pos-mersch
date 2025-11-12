@@ -296,6 +296,8 @@ class VentaCreate extends Component
 
         try {
             $user = Auth::user();
+
+          
             
             // 1. CREAR LA FACTURA REAL EN LA BASE DE DATOS
             $venta = Factura::create([
