@@ -2,12 +2,15 @@
 
 namespace App\Livewire\Ingresos;
 
+use App\Livewire\articulos\ArticuloCreate;
 use App\Models\Articulo;
 use App\Models\DetalleIngresos;
 use App\Models\Ingreso;
 use App\Models\Proveedor;
 use App\Models\ReferenciaRsf;
+use App\Requests\ArticuloGetRequest;
 use Illuminate\Support\Facades\DB;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class IngresoCreate extends Component
@@ -33,39 +36,7 @@ class IngresoCreate extends Component
             'cantidad' => 'required|numeric|min:1',
         ]);
 
-        $refItems = ReferenciaRsf::where('codigo_rsf', $this->codigo_barra)
-            ->orWhere('codigo_barra', $this->codigo_barra)
-            ->orWhere('articulo', $this->codigo_barra);
-
-        if ($refItems->count() === 0) {
-            $this->addError('codigo_barra', 'El articulo no existe.');
-            return;
-        };
-
-        $articuloExists = Articulo::where('codigo_proveedor', $this->codigo_barra)
-            ->orWhere('codigo_fabricante', $this->codigo_barra)
-            ->orWhere('articulo', $this->codigo_barra);
-
-        if ($articuloExists->count() > 0) {
-            if ($refItems->count() > 1) {
-                $this->coincidenciasArt = $articuloExists->get();
-            } else {
-                $this->agregarArticuloListado($articuloExists->first());
-                return;
-            }
-        }
-
-        $articuloExists = $articuloExists->get();
-        $refItems = $refItems->get();
-        if ($this->coincidenciasArt->isNotEmpty()) {
-            $filteredRefItems = $refItems->reject(function ($refItem) use ($articuloExists) {
-                return $articuloExists->contains('articulo', $refItem->articulo);
-            });
-            $this->coincidenciasArt = $filteredRefItems;
-        }
-
-        $this->coincidenciasRef = $refItems;
-        $this->mostrarModalDuplicados($refItems);
+        $this->dispatch('agregar-articulo', codigo_barra: $this->codigo_barra);
     }
 
 
@@ -102,9 +73,10 @@ class IngresoCreate extends Component
     }
 
 
+    #[On('agregar-articulo-listado')]
     public function agregarArticuloListado($articulo)
     {
-
+        $articulo = (object) $articulo;
         $this->items[] = [
             'articulo_id' => $articulo->id,
             'nombre' => $articulo->articulo,
@@ -127,6 +99,7 @@ class IngresoCreate extends Component
         $this->referenciaSeleccionada = null;
     }
 
+    #[On('selelccionado-articulo')]
     public function confirmarSeleccionArt($id)
     {
         $articulo = Articulo::find($id);
@@ -136,6 +109,7 @@ class IngresoCreate extends Component
         $this->agregarArticuloListado($articulo);
     }
 
+    #[On('selelccionado-referencia')]
     public function confirmarSeleccionRef($id)
     {
         $this->crearArticulo(ReferenciaRsf::find($id));
@@ -263,6 +237,14 @@ class IngresoCreate extends Component
         }
 
         $this->calcularTotal();
+    }
+
+    public function placeholder(){
+        return view('components.loading-page', [
+            'variant' => 'inline',
+            'message' => 'Cargando articulos...',
+            'color' => 'blue',
+        ])->render();
     }
 
 

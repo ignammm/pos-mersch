@@ -111,7 +111,6 @@ class CrudTable extends Component
         $this->validateRequest();
         $service = $this->getService();
         $response = $service->get($payload);
-
         if (!$response->successful) {
             $this->toastError($response->message ?? 'Error al cargar los datos.');
             return false;

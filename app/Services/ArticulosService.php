@@ -8,6 +8,7 @@ use App\Support\RepositoryResult;
 use App\Traits\RepositoryResponse;
 use App\Traits\ValidatesParameters;
 use Illuminate\Validation\ValidationException;
+use LDAP\Result;
 
 class ArticulosService
 {

@@ -36,7 +36,6 @@ class ArticuloCreate extends Component
     public function updatedCodigoFabricante($value)
     {
         $referencia = ReferenciaRsf::where('codigo_barra', $value)->first();
-
         if ($referencia) {
             $this->articulo = $referencia->articulo;
             $this->codigo_proveedor = $referencia->codigo_rsf;
