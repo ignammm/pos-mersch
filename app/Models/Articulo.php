@@ -16,11 +16,13 @@ class Articulo extends Model
         'codigo_fabricante',
         'rubro',
         'precio',
+        'stock',
         'marca',
         'descripcion',
         'enlace',
         'unidad',
         'proveedor_id',
+        'stock_minimo',
     ];
 
     public function proveedor()
@@ -36,6 +38,21 @@ class Articulo extends Model
     public function pedidos()
     {
         return $this->hasMany(Pedido::class);
+    }
+
+    public static function getByCodigo($codigo)
+    {
+        return Articulo::where('codigo_proveedor', $codigo)
+            ->orWhere('codigo_fabricante', $codigo)
+            ->orWhere('articulo', $codigo);
+    }
+
+    public static function existsArticulo($codigo_barra)
+    {
+        return ReferenciaRsf::where('codigo_proveedor', $codigo_barra)
+            ->orWhere('codigo_fabricante', $codigo_barra)
+            ->orWhere('articulo', $codigo_barra)
+            ->exists();
     }
 
 

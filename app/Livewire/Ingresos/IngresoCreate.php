@@ -12,7 +12,7 @@ use Livewire\Component;
 
 class IngresoCreate extends Component
 {
-    public $proveedor_id = 1, $rubro, $tipo_comprobante, $numero_comprobante, $fecha, $total = 0, $codigo_proveedor, $codigo_fabricante;
+    public $proveedor_id = 1, $rubro, $numero_comprobante, $fecha, $total = 0, $codigo_proveedor, $codigo_fabricante;
     public $cantidad = 1;
     public $codigo_barra;
     public $items = [];
@@ -33,36 +33,7 @@ class IngresoCreate extends Component
             'cantidad' => 'required|numeric|min:1',
         ]);
 
-        $refItems = ReferenciaRsf::where('codigo_rsf', $this->codigo_barra)
-            ->orWhere('codigo_barra', $this->codigo_barra)
-            ->orWhere('articulo', $this->codigo_barra);
-
-        if ($refItems->count() === 0) {
-            $this->addError('codigo_barra', 'El articulo no existe.');
-            return;
-        };
-
-        $articuloExists = Articulo::where('codigo_proveedor', $this->codigo_barra)
-            ->orWhere('codigo_fabricante', $this->codigo_barra)
-            ->orWhere('articulo', $this->codigo_barra);
-
-        if ($articuloExists->count() > 0) {
-            if ($refItems->count() > 1) {
-                $this->coincidenciasArt = $articuloExists->get();
-            } else {
-                $this->agregarArticuloListado($articuloExists->first());
-                return;
-            }
-        }
-
-        $articuloExists = $articuloExists->get();
-        $refItems = $refItems->get();
-        if ($this->coincidenciasArt->isNotEmpty()) {
-            $filteredRefItems = $refItems->reject(function ($refItem) use ($articuloExists) {
-                return $articuloExists->contains('articulo', $refItem->articulo);
-            });
-            $this->coincidenciasArt = $filteredRefItems;
-        }
+        
 
         $this->coincidenciasRef = $refItems;
         $this->mostrarModalDuplicados($refItems);
@@ -74,8 +45,6 @@ class IngresoCreate extends Component
         $this->mostrarModalDuplicados = true;
         $this->existen_duplicados = true;
     }
-
-    private function verificarArticulosCoincidentes() {}
 
     private function sumarCantidadSiExiste($articulo)
     {
@@ -118,13 +87,19 @@ class IngresoCreate extends Component
         ];
 
         $this->calcularTotal();
+        $this->limpiarCampos();
+    }
+
+    private function limpiarCampos()
+    {
         $this->codigo_barra = '';
         $this->cantidad = 1;
-
+        
         $this->mostrarModalDuplicados = false;
         $this->coincidenciasArt = '';
         $this->coincidenciasRef = '';
         $this->referenciaSeleccionada = null;
+
     }
 
     public function confirmarSeleccionArt($id)
@@ -219,7 +194,6 @@ class IngresoCreate extends Component
         try {
             $ingreso = Ingreso::create([
                 'proveedor_id' => $this->proveedor_id,
-                'tipo_comprobante' => $this->tipo_comprobante,
                 'numero_comprobante' => $this->numero_comprobante,
                 'fecha' => now(),
                 'total' => $this->total,

@@ -11,7 +11,6 @@ class Ingreso extends Model
 
     protected $fillable = [
         'proveedor_id',
-        'tipo_comprobante',
         'numero_comprobante',
         'fecha',
         'total',

@@ -35,15 +35,7 @@
         </div>
 
         <div>
-            <label class="block text-sm">Tipo de comprobante</label>
-            <input wire:model.live="tipo_comprobante" type="text"
-                class="w-full border rounded px-2 py-1
-            @if (!$proveedor_id) bg-gray-100 text-gray-500 cursor-not-allowed @endif"
-                @disabled(!$proveedor_id)>
-        </div>
-
-        <div>
-            <label class="block text-sm">Número</label>
+            <label class="block text-sm">Número Comprobante</label>
             <input wire:model.live="numero_comprobante" type="text"
                 class="w-full border rounded px-2 py-1
             @if (!$proveedor_id) bg-gray-100 text-gray-500 cursor-not-allowed @endif"

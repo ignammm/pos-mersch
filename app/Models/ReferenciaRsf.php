@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use function Laravel\Prompts\error;
+
 class ReferenciaRsf extends Model
 {
     use HasFactory;
@@ -29,4 +31,21 @@ class ReferenciaRsf extends Model
         'codigo_barra',
         'codigo_rsf',
     ];
+
+
+    public static function getByCodigo($codigo_barra)
+    {
+        return ReferenciaRsf::where('codigo_rsf', $codigo_barra)
+            ->orWhere('codigo_barra', $codigo_barra)
+            ->orWhere('articulo', $codigo_barra);
+    }
+
+    public static function existsReferenciaRsf($codigo_barra)
+    {
+        return ReferenciaRsf::where('codigo_rsf', $codigo_barra)
+            ->orWhere('codigo_barra', $codigo_barra)
+            ->orWhere('articulo', $codigo_barra)
+            ->exists();
+    }
+    
 }
