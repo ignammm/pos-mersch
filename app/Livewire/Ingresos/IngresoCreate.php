@@ -119,10 +119,11 @@ class IngresoCreate extends Component
         $this->crearArticulo(ReferenciaRsf::find($id));
     }
 
-
+    #[On('crear-articulo')]
     public function crearArticulo($articulo_rsf)
     {
-
+        $articulo_rsf = (object) $articulo_rsf;
+        
         if (!Articulo::where('codigo_proveedor', $articulo_rsf->codigo_rsf)->exists()) {
             $articulo = Articulo::create([
                 'articulo' => $articulo_rsf->articulo,

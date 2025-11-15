@@ -24,9 +24,8 @@ class ArticulosModal extends Component
     public function agregarArticulo($codigo_barra)
     {
         $this->clearCoincidencias();
-        $refItems = ReferenciaRsf::where('codigo_rsf', $codigo_barra)
-            ->orWhere('codigo_barra', $codigo_barra)
-            ->orWhere('articulo', $codigo_barra);
+
+        $refItems = ReferenciaRsf::getByCodigo($codigo_barra);
 
         //FIX
         if ($refItems->count() === 0) {
@@ -34,16 +33,20 @@ class ArticulosModal extends Component
             return;
         };
 
-        $articuloExists = Articulo::where('codigo_proveedor', $codigo_barra)
-            ->orWhere('codigo_fabricante', $codigo_barra)
-            ->orWhere('articulo', $codigo_barra);
+        $articuloExists = Articulo::getByCodigo($codigo_barra);
 
         if ($articuloExists->count() > 0) {
             $this->coincidenciasArt = $articuloExists->get();
         }
 
+        if ($refItems->count() === 1 && $articuloExists->count() === 0) {
+            $this->dispatch('crear-articulo', articulo_rsf: $refItems->first());
+            return;
+        }
+
         $articuloExists = $articuloExists->get();
         $refItems = $refItems->get();
+
 
         $this->coincidenciasRef = $refItems;
 
