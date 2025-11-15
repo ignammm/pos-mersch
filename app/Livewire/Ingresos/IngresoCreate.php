@@ -2,12 +2,15 @@
 
 namespace App\Livewire\Ingresos;
 
+use App\Livewire\articulos\ArticuloCreate;
 use App\Models\Articulo;
 use App\Models\DetalleIngresos;
 use App\Models\Ingreso;
 use App\Models\Proveedor;
 use App\Models\ReferenciaRsf;
+use App\Requests\ArticuloGetRequest;
 use Illuminate\Support\Facades\DB;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class IngresoCreate extends Component
@@ -33,10 +36,7 @@ class IngresoCreate extends Component
             'cantidad' => 'required|numeric|min:1',
         ]);
 
-        
-
-        $this->coincidenciasRef = $refItems;
-        $this->mostrarModalDuplicados($refItems);
+        $this->dispatch('agregar-articulo', codigo_barra: $this->codigo_barra);
     }
 
 
@@ -71,9 +71,10 @@ class IngresoCreate extends Component
     }
 
 
+    #[On('agregar-articulo-listado')]
     public function agregarArticuloListado($articulo)
     {
-
+        $articulo = (object) $articulo;
         $this->items[] = [
             'articulo_id' => $articulo->id,
             'nombre' => $articulo->articulo,
@@ -102,6 +103,7 @@ class IngresoCreate extends Component
 
     }
 
+    #[On('selelccionado-articulo')]
     public function confirmarSeleccionArt($id)
     {
         $articulo = Articulo::find($id);
@@ -111,6 +113,7 @@ class IngresoCreate extends Component
         $this->agregarArticuloListado($articulo);
     }
 
+    #[On('selelccionado-referencia')]
     public function confirmarSeleccionRef($id)
     {
         $this->crearArticulo(ReferenciaRsf::find($id));
@@ -237,6 +240,14 @@ class IngresoCreate extends Component
         }
 
         $this->calcularTotal();
+    }
+
+    public function placeholder(){
+        return view('components.loading-page', [
+            'variant' => 'inline',
+            'message' => 'Cargando articulos...',
+            'color' => 'blue',
+        ])->render();
     }
 
 
